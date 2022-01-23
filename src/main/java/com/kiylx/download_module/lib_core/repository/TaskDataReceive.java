@@ -152,7 +152,7 @@ public class TaskDataReceive implements RemoteRepo {
             DownloadInfo.allocPieceFileSize(info);
         }
         info.setHasMetadata(true);
-        info.setStatusCode(STATUS_RUNNING);
+        info.setFinalCode(STATUS_RUNNING);
         repo.syncInfoToDisk(info, Repo.SyncAction.UPDATE);//更新存储库中downloadInfo信息
         return null;
     }

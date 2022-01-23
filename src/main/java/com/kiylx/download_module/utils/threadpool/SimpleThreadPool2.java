@@ -1,8 +1,5 @@
 package com.kiylx.download_module.utils.threadpool;
 
-
-import com.kiylx.download_module.core.DownloadTaskRunnable;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;

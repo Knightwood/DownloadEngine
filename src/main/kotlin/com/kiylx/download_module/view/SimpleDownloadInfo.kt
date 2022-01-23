@@ -2,6 +2,8 @@ package com.kiylx.download_module.view
 
 import com.kiylx.download_module.lib_core.model.DownloadInfo
 import com.kiylx.download_module.lib_core.model.StatusCode
+import com.kiylx.download_module.lib_core.model.TaskLifecycle
+import com.sun.org.apache.xpath.internal.operations.Bool
 import java.util.*
 
 data class SimpleDownloadInfo(
@@ -9,19 +11,29 @@ data class SimpleDownloadInfo(
     val name: String,
     val filePath: String,
     val url: String,
-    var contentLength: Long = -1,
+    var fileSize: Long = -1,
     var currentLength: Long = 0,
-    var state: Int = StatusCode.STATUS_INIT,
+    var speed:Long=0,
+    var finalCode: Int = StatusCode.STATUS_INIT,//结果
+    var finalMsg: String? = "null",//结果相关的信息
+    var state:TaskLifecycle,//当前任务状态
+    var isRunning:Boolean=false//是否正在下载
 )
 
 fun genSimpleDownloadInfo(info: DownloadInfo): SimpleDownloadInfo {
-    return SimpleDownloadInfo(id = info.uuid,
+    return SimpleDownloadInfo(
+        id = info.uuid,
         name = info.fileName,
         filePath = info.path,
         url = info.url,
-        contentLength = info.totalBytes,
+        fileSize = info.totalBytes,
         currentLength = info.currentLength,
-        state = info.statusCode)
+        speed=0L,
+        finalCode = info.finalCode,
+        finalMsg = info.finalMsg,
+        state = info.lifeCycle,
+        isRunning = info.isRunning
+    )
 }
 
 class ViewsAction {

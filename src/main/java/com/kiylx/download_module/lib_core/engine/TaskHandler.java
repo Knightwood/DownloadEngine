@@ -71,7 +71,7 @@ public class TaskHandler {
     public boolean addDownloadTask(DownloadTask task) {
         if (isMaxActiveDownloads()) {
             wait.add(task);
-            task.setLifeCycle(TaskLifecycle.START);
+            task.setLifecycleState(TaskLifecycle.START);
             return false;
         } else {
             active.add(task);
@@ -296,7 +296,7 @@ public class TaskHandler {
         DownloadInfo info = task.getInfo();
         if (info == null)
             return;
-        switch (info.getStatusCode()) {
+        switch (info.getFinalCode()) {
             case StatusCode.STATUS_SUCCESS:
                 checkMoveAfterDownload(task.getInfo());
                 break;

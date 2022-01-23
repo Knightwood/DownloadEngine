@@ -1,10 +1,13 @@
 package com.kiylx.download_module.lib_core.model
 
+import com.kiylx.download_module.view.SimpleDownloadInfo
+import com.kiylx.download_module.view.genSimpleDownloadInfo
 import java.util.UUID
 import java.io.File
 import java.lang.IllegalArgumentException
 
 class DownloadInfo(var url: String, var path: String, var fileName: String = "", threadNum: Int = 1) {
+
     var uuid: UUID? = null
         //标识唯一信息
         get() {
@@ -26,10 +29,28 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
                 field = 0
         }
     var userAgent: String? = null
-
+    var lifeCycle: TaskLifecycle = TaskLifecycle.OH
+        set(value) {
+            field = value
+            simpleDownloadInfo.state = value
+        }
     var isRunning = false //下载任务是否正在进行
-    var statusCode = StatusCode.STATUS_INIT//StatusCode 下载任务成功与否，是不是在等在网络重新下载，结果同步至此
-    var statusMsg: String? = null//StatusMsg  处理code表示的结果之外 额外的消息
+        set(value) {
+            field = value
+            simpleDownloadInfo.isRunning = value
+        }
+    var finalCode = StatusCode.STATUS_INIT
+        //FinalCode 下载任务成功与否，是不是在等在网络重新下载，结果同步至此
+        set(value) {
+            field = value
+            simpleDownloadInfo.finalCode = value
+        }
+    var finalMsg: String? = null
+        //FinalMsg  处理code表示的结果之外 额外的消息
+        set(value) {
+            field = value
+            simpleDownloadInfo.finalMsg = value
+        }
 
     var isPartialSupport = false//是否支持分块下载
     var threadCounts: Int = 1
@@ -52,6 +73,7 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
      * 当前文件已下载的大小,
      * 需要百分比的话，用contentLength和totalLength自行计算，结果要转成float类型
      */
+//todo 计算下载速度和累积下载长度
     var currentLength: Long = 0
         get() {
             var unDownloadPart: Long = 0 //未下载的部分
@@ -62,8 +84,13 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
             currentLength = totalBytes - unDownloadPart
             return field
         }
+        set(value) {
+            field = value
+            simpleDownloadInfo.currentLength = value
+        }
+
     val isDownloadSuccess: Boolean
-        get() = statusCode == StatusCode.STATUS_SUCCESS
+        get() = finalCode == StatusCode.STATUS_SUCCESS
 
     /**
      * @return 返回下载进度, float类型
@@ -79,25 +106,30 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
 
     var pieceResultArray: Array<PieceResult>? = null//分块的结果，目前还没有使用
 
-    var checkSum:String?=null // MD5, SHA-256。 添加下载生成downloadinfo时添加，也可不添加 。若添加此值，在下载完成时，会校验此值
+    var checkSum: String? = null // MD5, SHA-256。 添加下载生成downloadinfo时添加，也可不添加 。若添加此值，在下载完成时，会校验此值
 
     fun reduceRetryCount() {
         if (retryCount > 0)
             retryCount--
     }
+
     fun plusRetryCount() {
         if (retryCount >= 0)
             retryCount++
     }
+
     fun cleanInfo() {
-        statusMsg = ""
-        statusCode = StatusCode.STATUS_INIT
+        finalMsg = ""
+        finalCode = StatusCode.STATUS_INIT
         retryCount = 0
         fetchCount = 0
         isHasMetadata = false
         totalBytes = -1
     }
 
+    val simpleDownloadInfo by lazy {
+        genSimpleDownloadInfo(info = this)
+    }
 
 
     init {
@@ -150,14 +182,14 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
 
         @JvmStatic
         fun modifyMsg(info: DownloadInfo, verifyResult: VerifyResult) {
-            info.statusCode = verifyResult.finalCode
-            info.statusMsg = verifyResult.message
+            info.finalCode = verifyResult.finalCode
+            info.finalMsg = verifyResult.message
         }
 
         @JvmStatic
         fun modifyMsg(info: DownloadInfo, finalCode: Int, msg: String) {
-            info.statusCode = finalCode
-            info.statusMsg = msg
+            info.finalCode = finalCode
+            info.finalMsg = msg
         }
     }
 }
@@ -174,15 +206,17 @@ class PieceInfo @JvmOverloads constructor(
     var curBytes: Long = 0,//当前分块已经下载了多少
     var totalBytes: Long = -1,//此分块的完整大小
 
-    var finalCode: Int= StatusCode.STATUS_INIT,
+    var finalCode: Int = StatusCode.STATUS_INIT,
     var msg: String? = null,
 ) {
-    fun startPlus(delta:Long){
-        start+=delta
+    fun startPlus(delta: Long) {
+        start += delta
     }
-    fun curBytesPlus(delta: Long){
-        curBytes+=delta
+
+    fun curBytesPlus(delta: Long) {
+        curBytes += delta
     }
+
     fun clean() {
         finalCode = StatusCode.STATUS_INIT
         msg = null

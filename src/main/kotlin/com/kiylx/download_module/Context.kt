@@ -1,14 +1,14 @@
 package com.kiylx.download_module
 
-import com.kiylx.download_module.fileio.filesystem.FileKit
-import com.kiylx.download_module.fileio.filesystem.FileKitImpl
+import com.kiylx.download_module.fileskit.FileKit
+import com.kiylx.download_module.fileskit.FileKitImpl
+import com.kiylx.download_module.file_platform.system.SysCall
+import com.kiylx.download_module.file_platform.system.SysCallImpl
 import com.kiylx.download_module.lib_core.engine.TaskHandler
 import com.kiylx.download_module.lib_core.interfaces.VerifyFactory
 import com.kiylx.download_module.lib_core.model.VerifyFactoryImpl
 import com.kiylx.download_module.lib_core.interfaces.Repo
 import com.kiylx.download_module.lib_core.repository.RepoImpl
-import com.kiylx.download_module.fileio.system.SysCall
-import com.kiylx.download_module.fileio.system.SysCallImpl
 import com.kiylx.download_module.utils.kotlin.CDelegate
 
 class Context(configs: ContextConfigs) {
@@ -24,7 +24,7 @@ class Context(configs: ContextConfigs) {
                     field
                 } else {
                     val obj = setting.repoClazz!!.getDeclaredConstructor().newInstance()
-                    field = obj as Repo?
+                    field = obj
                     field
                 }
             return field
@@ -32,7 +32,8 @@ class Context(configs: ContextConfigs) {
 
     val SysCallKit: SysCall by CDelegate(setting.sysCallClazz,::SysCallImpl)
 
-    val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz, ::FileKitImpl)
+    val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz,
+        ::FileKitImpl)
 
     val taskHandler: TaskHandler by lazy { TaskHandler.getInstance() }
     val verifyFactory: VerifyFactory by lazy { VerifyFactoryImpl() }

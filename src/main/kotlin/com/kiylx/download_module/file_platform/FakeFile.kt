@@ -1,6 +1,6 @@
-package com.kiylx.download_module.fileio
+package com.kiylx.download_module.file_platform
 
-import com.kiylx.download_module.fileio.system.SysCall
+import com.kiylx.download_module.file_platform.system.SysCall
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path

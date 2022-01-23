@@ -25,7 +25,7 @@ class ViewsCenter {
         override fun run() {
             if (!downloadResultListeners.isEmpty()) {
                 downloadResultListeners.forEach { listener ->
-                    listener.updated()
+                    //listener.updated()
                 }
             }
 

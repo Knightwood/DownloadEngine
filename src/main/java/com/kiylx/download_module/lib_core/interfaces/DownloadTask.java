@@ -1,6 +1,6 @@
 package com.kiylx.download_module.lib_core.interfaces;
 
-import com.kiylx.download_module.fileio.FakeFile;
+import com.kiylx.download_module.file_platform.FakeFile;
 import com.kiylx.download_module.lib_core.model.*;
 
 import java.util.List;
@@ -9,7 +9,7 @@ import java.util.concurrent.Future;
 
 public abstract class DownloadTask implements Callable<TaskResult> {
     public int moveState = 0;
-    protected LifecycleCollection lifecycle;
+    private LifecycleCollection lifecycle;
     private boolean recoveryFromDisk=false;
 
     public DownloadTask() {
@@ -47,8 +47,13 @@ public abstract class DownloadTask implements Callable<TaskResult> {
         return this.moveState;
     }
 
-    public void setLifeCycle(TaskLifecycle state) {
+    public LifecycleCollection getLifecycle() {
+        return lifecycle;
+    }
+
+    public void setLifecycleState(TaskLifecycle state) {
         this.lifecycle.setLifecycleState(state);
+        getInfo().setLifeCycle(state);
     }
 
     public boolean isStop() {

@@ -1,6 +1,6 @@
 package com.kiylx.download_module.lib_core.engine;
 
-import com.kiylx.download_module.fileio.FakeFile;
+import com.kiylx.download_module.file_platform.FakeFile;
 import com.kiylx.download_module.lib_core.interfaces.ConnectionListener;
 import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
 import com.kiylx.download_module.lib_core.interfaces.PieceThread;

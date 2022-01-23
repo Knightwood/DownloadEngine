@@ -11,17 +11,18 @@ class DownloadCoreTest {
     @BeforeEach
     void setUp() {
     }
+
     @Test
-    void testDownload(){
+    void testDownload() {
+        Student student = new Student();
+        System.out.print("-name:"+student.getName()+"-age:"+student.getAge()+"\n");
+        Info info=new Info(student.getName(),student.getAge());
+        System.out.print("-name:"+info.getName()+"-age:"+info.getAge()+"\n");
 
-
-       Thread thread =new Thread(new Runnable() {
-           @Override
-           public void run() {
-
-
-           }
-       });
+        student.setAge(12);
+        student.setName("tom");
+        System.out.print("-name:"+student.getName()+"-age:"+student.getAge()+"\n");
+        System.out.print("-name:"+info.getName()+"-age:"+info.getAge()+"\n");
     }
 
 }

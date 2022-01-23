@@ -1,13 +1,12 @@
-package com.kiylx.download_module.fileio.filesystem;
+package com.kiylx.download_module.fileskit;
 
-import com.kiylx.download_module.fileio.FakeFile;
+import com.kiylx.download_module.file_platform.FakeFile;
 import io.reactivex.annotations.NonNull;
 
 import java.io.*;
 
 
 public interface FileKit<T> {
-    static final String EXTENSION_SEPARATOR = ".";
 
     /**
      * @param path         路径
@@ -15,6 +14,8 @@ public interface FileKit<T> {
      * @return 创建成功返回file, 失败返回null
      */
     FakeFile<T> create(String path, boolean isCreateFile);
+
+    FakeFile<T> find(String path);//返回系统上的文件
 
     /**
      * @param path     路径
@@ -70,21 +71,6 @@ public interface FileKit<T> {
     boolean copy(String path, String newPath, int fileKind);
 
     String getExtension(FakeFile<T> file);
-
-    static String getExtension(String fileName){
-        if (fileName == null)
-            return null;
-
-        int extensionPos = fileName.lastIndexOf(EXTENSION_SEPARATOR);
-        int lastSeparator = fileName.lastIndexOf(File.separator);
-        int index = (lastSeparator > extensionPos ? -1 : extensionPos);
-
-        if (index == -1)
-            return "";
-        else
-            return fileName.substring(index + 1);
-    }
-
 
     void allocate(@NonNull FileDescriptor fd, long length) throws IOException;
 

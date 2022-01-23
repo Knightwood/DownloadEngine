@@ -1,8 +1,8 @@
-package com.kiylx.download_module.fileio.filesystem;
+package com.kiylx.download_module.fileskit;
 
-import com.kiylx.download_module.fileio.FakeFile;
-import com.kiylx.download_module.fileio.PathFile;
-import com.kiylx.download_module.fileio.system.SysCall;
+import com.kiylx.download_module.file_platform.FakeFile;
+import com.kiylx.download_module.file_platform.PathFile;
+import com.kiylx.download_module.file_platform.system.SysCall;
 import io.reactivex.annotations.NonNull;
 
 import java.io.*;
@@ -32,6 +32,11 @@ public class FileKitImpl implements FileKit<Path> {
             e.printStackTrace();
         }
         return new PathFile(result, FakeFile.linux);
+    }
+
+    @Override
+    public FakeFile<Path> find(String path) {
+        return new PathFile(Paths.get(path), FakeFile.linux);
     }
 
     @Override

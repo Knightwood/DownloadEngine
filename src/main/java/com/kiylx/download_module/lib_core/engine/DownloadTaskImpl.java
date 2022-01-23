@@ -1,7 +1,7 @@
 package com.kiylx.download_module.lib_core.engine;
 
-import com.kiylx.download_module.fileio.FakeFile;
-import com.kiylx.download_module.fileio.filesystem.FileKit;
+import com.kiylx.download_module.file_platform.FakeFile;
+import com.kiylx.download_module.fileskit.FileKit;
 import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
 import com.kiylx.download_module.lib_core.interfaces.PieceThread;
 import com.kiylx.download_module.lib_core.interfaces.Repo;
@@ -12,7 +12,6 @@ import com.kiylx.download_module.utils.java_log_pack.Log;
 import io.reactivex.annotations.NonNull;
 import kotlin.Pair;
 
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -28,11 +27,11 @@ import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
 
 public class DownloadTaskImpl extends DownloadTask {
-    DownloadInfo info;
+    final DownloadInfo info;
     private List<PieceThreadImpl> pieceThreads = Collections.emptyList();
     private ExecutorService exec;
     private FileKit fs;
-    private FakeFile fakeFile=null;
+    private FakeFile fakeFile = null;
     private final Repo repo = getContext().getRepo();
     public final TaskCallback callback = new TaskCallback() {
         @Override
@@ -43,17 +42,18 @@ public class DownloadTaskImpl extends DownloadTask {
             info.getSplitStart()[blockId] = pieceInfo.getStart();
             info.getSplitEnd()[blockId] = pieceInfo.getEnd();
             info.setRunning(isRunning);
+            
             syncInfo(Repo.SyncAction.UPDATE);
             syncPieceInfo(pieceInfo, Repo.SyncAction.UPDATE);
-            repo.updateInfoUI(info);
+            repo.updateInfoUI(info);//todo 此处会被新view方式替代
         }
 
         @Override
         public FakeFile getFile() {
-           //return fs.get(info.getPath() + info.getFileName());
-            if (fakeFile==null)
-                fakeFile= Objects.requireNonNull(checkDiskAndInitFile()).getFirst();
-           return fakeFile;
+            //return fs.get(info.getPath() + info.getFileName());
+            if (fakeFile == null)
+                fakeFile = Objects.requireNonNull(checkDiskAndInitFile()).getFirst();
+            return fakeFile;
         }
 
         @Override
@@ -66,8 +66,8 @@ public class DownloadTaskImpl extends DownloadTask {
     public DownloadTaskImpl(@NonNull DownloadInfo info) {
         super();
         this.info = info;
-        lifecycle.initState(TaskLifecycle.OH, TaskLifecycle.OH);
-        fs=getContext().getFileKit();
+        getLifecycle().initState(TaskLifecycle.OH, TaskLifecycle.OH);
+        fs = getContext().getFileKit();
     }
 
     public static DownloadTask instance(DownloadInfo info) {
@@ -76,25 +76,23 @@ public class DownloadTaskImpl extends DownloadTask {
 
     @Override
     protected DownloadTask initTask() {
-        lifecycle.setLifecycleState(TaskLifecycle.CREATE);
+        setLifecycleState(TaskLifecycle.CREATE);
         return this;
     }
 
     /**
      * 清理下载任务
      * 包括出错后重新尝试下载的任务、从磁盘恢复的任务
-     *
-     * @return
      */
     private TaskResult cleanTask() {
-        if (info.getStatusCode() == STATUS_SUCCESS || info.getStatusCode() == STATUS_CANCELLED) {
+        if (info.getFinalCode() == STATUS_SUCCESS || info.getFinalCode() == STATUS_CANCELLED) {
             return new TaskResult(info.getUuid(), TaskResult.TaskResultCode.DOWNLOAD_COMPLETE,
                     "Download was success or canceled",
                     STATUS_SUCCESS
             );//文件下载成功或取消
         }
-        info.setStatusCode(STATUS_INIT);
-        info.setStatusMsg("");
+        info.setFinalCode(STATUS_INIT);
+        info.setFinalMsg("");
 
         return null;
     }
@@ -107,7 +105,7 @@ public class DownloadTaskImpl extends DownloadTask {
             return cleanTaskResult;
         try {
             VerifyResult verifyResult = execPieceDownload();//执行分块下载
-           //todo 应该在execPieceDownload()方法里写入结果   DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
+            //todo 应该在execPieceDownload()方法里写入结果   DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
             return new TaskResult(info.getUuid(), verifyResult);
         } catch (Throwable t) {
             Log.e(Log.getStackTraceString(t));
@@ -115,22 +113,17 @@ public class DownloadTaskImpl extends DownloadTask {
                 DownloadInfo.modifyMsg(info, STATUS_UNKNOWN_ERROR, t.getMessage());//下载结果写入DownloadInfo
             }
         } finally {
-            lifecycle.setLifecycleState(TaskLifecycle.STOP);
+            setLifecycleState(TaskLifecycle.STOP);
             syncInfo(Repo.SyncAction.UPDATE);//结果同步到磁盘
             closeThings();
         }
-        return new TaskResult(info.getUuid(), TaskResult.TaskResultCode.ERROR, info.getStatusMsg(), info.getStatusCode());
+        return new TaskResult(info.getUuid(), TaskResult.TaskResultCode.ERROR, info.getFinalMsg(), info.getFinalCode());
     }
 
-    /**
-     * 执行分块下载
-     *
-     * @return 返回分块下载结果
-     */
     private VerifyResult execPieceDownload() {
-    VerifyResult verifyResult=null;
+        VerifyResult verifyResult = null;
         List<Future<PieceResult>> futureList = Collections.emptyList();//存储分块任务（callable）的返回结果（future）
-        lifecycle.setLifecycleState(TaskLifecycle.RUNNING);
+        setLifecycleState(TaskLifecycle.RUNNING);
 
         boolean shouldQueryDb = (isRecoveryFromDisk() || info.getRetryCount() > 0);//旧任务或者尝试重新下载的任务
         VerifyResult metaResult = TaskDataReceive.fetchMetaData(info, shouldQueryDb);//验证连接有效性
@@ -144,11 +137,11 @@ public class DownloadTaskImpl extends DownloadTask {
             return generateVerifyResult(STATUS_WAITING_FOR_NETWORK, "LOST CONNECTING", FAILED);
         }
         try {//创建分块执行下载
-           Pair<FakeFile, VerifyResult> fileVerifyResultPair = checkDiskAndInitFile();//创建文件
+            Pair<FakeFile, VerifyResult> fileVerifyResultPair = checkDiskAndInitFile();//创建文件
             if (fileVerifyResultPair.getSecond() != null) {
                 return fileVerifyResultPair.getSecond();
             }
-            fakeFile=fileVerifyResultPair.getFirst();//赋予文件
+            fakeFile = fileVerifyResultPair.getFirst();//赋予文件
             exec = (info.getThreadCounts() == 1 || !info.isPartialSupport()) ?
                     Executors.newSingleThreadExecutor() : Executors.newFixedThreadPool(info.getThreadCounts());
             pieceThreads = PieceThreadImpl.generatePieceList(repo, info, callback, shouldQueryDb);
@@ -162,14 +155,14 @@ public class DownloadTaskImpl extends DownloadTask {
             // 中断后停止当前线程
             Thread.interrupted();
 
-            verifyResult=parseResult(futureList);
+            verifyResult = parseResult(futureList);
             return verifyResult;
-        }finally{
-            if(verifyResult!=null)
-                    DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
+        } finally {
+            if (verifyResult != null)
+                DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
         }
-           verifyResult=parseResult(futureList);
-            return verifyResult;
+        verifyResult = parseResult(futureList);
+        return verifyResult;
     }
 
 
@@ -177,12 +170,12 @@ public class DownloadTaskImpl extends DownloadTask {
      * @return 根据当前任务所处生命周期，返回任务结果
      */
     private VerifyResult parseResult(List<Future<PieceResult>> futureList) {
-        if (info.getStatusCode() == HTTP_UNAVAILABLE) {
+        if (info.getFinalCode() == HTTP_UNAVAILABLE) {
             return generateVerifyResult(STATUS_WAITING_TO_RETRY, "waiting network to retry download", FAILED);
         }
         if (futureList.size() != info.getThreadCounts())
             return generateVerifyResult(STATUS_ERROR, "some piece download failed", FAILED);
-        switch (lifecycle.getNowState()) {//这里只处理了lifecycle但没有校验分块的结果，还要改吗？
+        switch (getLifecycle().getNowState()) {//这里只处理了lifecycle但没有校验分块的结果，还要改吗？
             case STOP:
                 return generateVerifyResult(STATUS_STOPPED, "download task paused", PAUSED);
             case DROP:
@@ -194,8 +187,8 @@ public class DownloadTaskImpl extends DownloadTask {
                 int code = pieceResultFuture.get().getFinalCode();
                 if (!isStatusCompleted(code)) {
                     return generateVerifyResult(STATUS_ERROR, "something wrong", FAILED);
-                }else{
-                return generateVerifyResult(STATUS_SUCCESS, "Download Completed", DOWNLOAD_COMPLETE);
+                } else {
+                    return generateVerifyResult(STATUS_SUCCESS, "Download Completed", DOWNLOAD_COMPLETE);
                 }
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
@@ -206,13 +199,13 @@ public class DownloadTaskImpl extends DownloadTask {
 
     @Override
     public void requestCancel() {
-        lifecycle.setLifecycleState(TaskLifecycle.DROP);
+        setLifecycleState(TaskLifecycle.DROP);
         setFlag(false);
     }
 
     @Override
     public void requestStop() {
-        lifecycle.setLifecycleState(TaskLifecycle.STOP);
+        setLifecycleState(TaskLifecycle.STOP);
         setFlag(false);
     }
 
@@ -228,7 +221,7 @@ public class DownloadTaskImpl extends DownloadTask {
 
     @Override
     public void requestResume() {
-        lifecycle.setLifecycleState(TaskLifecycle.RESTART);
+        setLifecycleState(TaskLifecycle.RESTART);
         setFlag(true);
     }
 
@@ -242,11 +235,11 @@ public class DownloadTaskImpl extends DownloadTask {
         boolean isExist = fs.isExist(info.getPath(), FileKit.FileKind.file);
         if (!isExist) {//文件不存在，检查磁盘空间，并创建文件
             String path = info.getPath();
-            boolean enoughSpace = fs.checkSpace(path,info.getTotalBytes());
+            boolean enoughSpace = fs.checkSpace(path, info.getTotalBytes());
             if (!enoughSpace)
                 return new Pair<>(null, generateVerifyResult(STATUS_ERROR, "CAN NOT INIT FILE!", ERROR));
-           FakeFile file= fs.create(info.getPath(),true);
-            return new Pair<>(file,null);
+            FakeFile file = fs.create(info.getPath(), true);
+            return new Pair<>(file, null);
         }
         return null;
     }
@@ -264,8 +257,8 @@ public class DownloadTaskImpl extends DownloadTask {
      * 生成verifyResult同时，把结果写入downloadInfo
      */
     private VerifyResult generateVerifyResult(int finalCode, String msg, TaskResult.TaskResultCode taskResultCode) {
-        info.setStatusCode(finalCode);
-        info.setStatusMsg(msg);
+        info.setFinalCode(finalCode);
+        info.setFinalMsg(msg);
         return new VerifyResult(finalCode, msg, taskResultCode);
     }
 

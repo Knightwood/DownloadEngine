@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.kiylx.download_module.ContextKt.getContext;
-import static com.kiylx.download_module.fileio.filesystem.FileKit.getExtension;
+import static com.kiylx.download_module.fileskit.FileUtils.getExtension;
 
 public class Utils {
     public static final String INFINITY_SYMBOL = "\u221e";
@@ -93,7 +93,7 @@ public class Utils {
 
         /* If we still have nothing at this point, try the content location */
         if (filename == null && contentLocation != null) {
-            String decodedContentLocation = URLDecoder.decode(contentLocation, Charset.defaultCharset());
+            String decodedContentLocation = URLDecoder.decode(contentLocation,Charset.defaultCharset());
             if (decodedContentLocation != null) {
                 int queryIndex = decodedContentLocation.indexOf('?');
                 /* If there is a query string strip it, same as desktop browsers */

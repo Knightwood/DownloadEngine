@@ -1,5 +1,6 @@
-package com.kiylx.download_module.fileio.system
+package com.kiylx.download_module.file_platform.system
 
+import com.kiylx.download_module.file_platform.system.SysCall
 import java.io.FileDescriptor
 
 class SysCallImpl: SysCall {
