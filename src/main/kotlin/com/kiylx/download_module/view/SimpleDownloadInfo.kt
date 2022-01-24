@@ -12,8 +12,8 @@ data class SimpleDownloadInfo(
     val filePath: String,
     val url: String,
     var fileSize: Long = -1,
-    var currentLength: Long = 0,
-    var speed:Long=0,
+    var currentLength: Long = 0L,
+    var speed:Long=0L,// bytes/s
     var finalCode: Int = StatusCode.STATUS_INIT,//结果
     var finalMsg: String? = "null",//结果相关的信息
     var state:TaskLifecycle,//当前任务状态
@@ -27,7 +27,7 @@ fun genSimpleDownloadInfo(info: DownloadInfo): SimpleDownloadInfo {
         filePath = info.path,
         url = info.url,
         fileSize = info.totalBytes,
-        currentLength = info.currentLength,
+        currentLength = info.getDownloadedSize(),
         speed=0L,
         finalCode = info.finalCode,
         finalMsg = info.finalMsg,

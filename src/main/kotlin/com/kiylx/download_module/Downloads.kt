@@ -56,7 +56,7 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
      */
     @Deprecated("不该使用")
     fun getDownloadsList(kind: Int): TasksCollection? {
-        return mTaskHandler.getList(kind)
+        return mTaskHandler.getDownloadTaskList(kind)
     }
 
     /**

@@ -100,3 +100,5 @@ fabric.properties
 /.gradle/
 /build/kotlin/compileKotlin/build-history.bin
 /build/kotlin/compileKotlin/dirty-sources.txt
+
+build/

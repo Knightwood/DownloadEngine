@@ -126,7 +126,7 @@ public class WaitingDownloadQueue implements TasksCollection {
             case ViewsAction.generate:
                 views = new ArrayList<>();
             case ViewsAction.update:
-                waiting.forEach(downloadTask -> views.add(genSimpleDownloadInfo(downloadTask.getInfo())));
+                waiting.forEach(downloadTask -> views.add(downloadTask.getInfo().getSimpleDownloadInfo()));
                 return views;
             case ViewsAction.pull:
             default:

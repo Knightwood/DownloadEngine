@@ -69,7 +69,7 @@ public class DownloadMap implements TasksCollection {
             case ViewsAction.generate:
                 views = new ArrayList<>();
             case ViewsAction.update:
-                map.values().forEach(downloadTask -> views.add(genSimpleDownloadInfo(downloadTask.getInfo())));
+                map.values().forEach(downloadTask -> views.add(downloadTask.getInfo().getSimpleDownloadInfo()));
                 return views;
             case ViewsAction.pull:
             default:

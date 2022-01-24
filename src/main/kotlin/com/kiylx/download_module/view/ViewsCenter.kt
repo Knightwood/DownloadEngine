@@ -4,49 +4,33 @@ import com.kiylx.download_module.Context
 import com.kiylx.download_module.getContext
 import com.kiylx.download_module.lib_core.engine.TaskHandler
 import com.kiylx.download_module.lib_core.interfaces.DownloadResultListener
-import okhttp3.internal.wait
+import com.kiylx.download_module.lib_core.interfaces.PieceThread
+import io.reactivex.Observable
 import java.lang.ref.WeakReference
-import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.timerTask
+import java.util.concurrent.TimeUnit
 
 class ViewsCenter {
     private var time = Context.updateViewInterval;//以多久的间隔更新视图
     private var connected: Boolean = false
     private val downloadResultListeners = ConcurrentLinkedQueue<DownloadResultListener>()
     private var tasks: WeakReference<TaskHandler>? = null
-    private val taskNotify: TaskNotify = TaskNotify()
-    private val timer = Timer()
-    private val bool = AtomicBoolean(false)
+    private var infosList: MutableList<SimpleDownloadInfo>? = null
 
-    inner class TaskNotify : TimerTask() {
-        override fun run() {
-            if (!downloadResultListeners.isEmpty()) {
-                downloadResultListeners.forEach { listener ->
-                    //listener.updated()
-                }
-            }
-
-        }
+    init {
+        tasks = WeakReference(getContext().taskHandler)
+        infosList = tasks!!.get()?.allSimpleDownloadsInfo;
     }
 
-    fun activeNotify() {
-        if (bool.compareAndSet(false, true)) {
-            timer.schedule(taskNotify, 0L, time)
+    //todo SimpleDownloadInfo本身会在下载过程中被更新，所以这里只需要不停的用rxjava周期性的推送即可
+    val observable: Observable<MutableList<SimpleDownloadInfo>?> =
+        Observable.just(infosList).repeatWhen {
+            Observable.timer(2, TimeUnit.SECONDS)
         }
-    }
-
-    fun stopNotify() {
-        if (bool.compareAndSet(true, false)) {
-            timer.cancel()
-        }
-    }
-
 
     fun addListener(listener: DownloadResultListener) {
         downloadResultListeners.add(listener)
+
     }
 
     fun removeListener(listener: DownloadResultListener) {
@@ -66,24 +50,10 @@ class ViewsCenter {
         connected = false
     }
 
-    //获得taskhandler
-    private fun connectTaskHandler() {
-        tasks = WeakReference(getContext().taskHandler)
-    }
-
     //清理
     private fun clear() {
         tasks?.clear()
         downloadResultListeners.clear()
     }
 
-    private interface IMethod {
-        operator fun invoke(listener: DownloadResultListener?)
-    }
-
-    private fun notifyListeners(l: IMethod, listeners: ConcurrentLinkedQueue<DownloadResultListener>) {
-        for (tmp in listeners) {
-            if (tmp != null) l.invoke(tmp)
-        }
-    }
 }

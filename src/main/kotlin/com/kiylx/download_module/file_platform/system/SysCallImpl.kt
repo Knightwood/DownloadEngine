@@ -3,6 +3,9 @@ package com.kiylx.download_module.file_platform.system
 import com.kiylx.download_module.file_platform.system.SysCall
 import java.io.FileDescriptor
 
+/**
+ * 默认实现，可以被外界实现替换
+ */
 class SysCallImpl: SysCall {
     override fun checkConnectivity(): Boolean {
         return true

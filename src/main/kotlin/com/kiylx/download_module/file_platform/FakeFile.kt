@@ -1,6 +1,8 @@
 package com.kiylx.download_module.file_platform
 
 import com.kiylx.download_module.file_platform.system.SysCall
+import com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROGRESS_STEP
+import com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROGRESS_TIME
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,7 +23,7 @@ sealed class FakeFile<T>(
     abstract fun newInputStream(): InputStream
 
     @Throws(IOException::class)
-    abstract fun write(b: ByteArray?, off: Int, len: Int)
+    abstract fun write(b: ByteArray, off: Int, len: Int)
 
     @Throws(IOException::class)
     abstract fun close()
@@ -41,6 +43,8 @@ sealed class FakeFile<T>(
  */
 class FDFile(val fileDescriptor: FileDescriptor, platform: Int = android) :
     FakeFile<FileDescriptor>(fileDescriptor, platform, fdImpl) {
+    var currentSize: Long = 0
+    var currentTime: Long = -0
     val fout: FileOutputStream by lazy { FileOutputStream(fileDescriptor) }
 
     override fun seek(pos: Long) = sysCall.lseek(fileDescriptor, pos)
@@ -48,7 +52,17 @@ class FDFile(val fileDescriptor: FileDescriptor, platform: Int = android) :
     override fun get(): FileDescriptor = fileDescriptor
 
     @Throws(IOException::class)
-    override fun write(b: ByteArray?, off: Int, len: Int) = fout.write(b, off, len)
+    override fun write(b: ByteArray, off: Int, len: Int) {
+        fout.write(b, off, len)
+        currentSize += b.size
+        val flash = System.currentTimeMillis() - currentTime > MIN_PROGRESS_TIME
+        if (currentSize > MIN_PROGRESS_STEP && flash) {
+            fout.flush()
+            fileDescriptor.sync()
+            currentSize = 0
+            currentTime = System.currentTimeMillis()
+        }
+    }
 
     override fun newOutputStream(): OutputStream = FileOutputStream(fileDescriptor)
 
@@ -56,6 +70,8 @@ class FDFile(val fileDescriptor: FileDescriptor, platform: Int = android) :
 
     @Throws(IOException::class)
     override fun close() {
+        fout.flush()
+        fileDescriptor.sync()
         fout.close()
     }
 
@@ -73,7 +89,9 @@ class PathFile(val path: Path, platform: Int = linux) : FakeFile<Path>(path, pla
     override fun seek(pos: Long) = randomAccessFile.seek(pos)
 
     @Throws(IOException::class)
-    override fun write(b: ByteArray?, off: Int, len: Int) = randomAccessFile.write(b, off, len)
+    override fun write(b: ByteArray, off: Int, len: Int) {
+        randomAccessFile.write(b, off, len)
+    }
 
     override fun newOutputStream(): OutputStream = Files.newOutputStream(path)
 

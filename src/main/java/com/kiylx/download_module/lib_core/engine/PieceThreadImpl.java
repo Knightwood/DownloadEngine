@@ -143,17 +143,16 @@ public class PieceThreadImpl extends PieceThread {
         if (response.body() != null) {
             try (InputStream inputStream = Objects.requireNonNull(response.body()).byteStream()) {
 
-                byte[] b = new byte[1024];
+                byte[] b = new byte[BUFFER_SIZE];
                 //从流中读取的数据长度
                 int len;
                 //流没有读尽和没有暂停时执行循环以写入文件
                 while (((len = inputStream.read(b)) != -1) && isRunning) {
                     rf.write(b, 0, len);
-                    //计算出总的下载长度
-                    startPlus(len);
-                    curBytesPlus(len);
+                    startPlus(len);//累加进度
                     if (callback != null)
                         callback.update(pieceInfo, isRunning);
+                    //updateProgress(len);
                 }
                 //流没有读尽且暂停时的处理
                 if ((!isRunning) && len != -1) {
@@ -179,6 +178,25 @@ public class PieceThreadImpl extends PieceThread {
         }
     }
 
+    private long currentTime = 0L;
+    private long currentSize = 0L;
+//未使用
+    private void updateProgress(long len) {
+        startPlus(len);//累加
+        long deltaTime = System.currentTimeMillis() - currentTime;
+        long deltaSize = getCurBytes() - currentSize;
+
+        if (deltaTime > MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
+            currentTime = System.currentTimeMillis();
+            currentSize=getCurBytes();
+
+            long speed = deltaSize / deltaTime * 1000; // bytes/s
+            pieceInfo.setSpeed(speed);
+        }
+        if (callback != null)
+            callback.update(pieceInfo, isRunning);
+    }
+
     /**
      * 线程之行结束的清理
      */
@@ -186,7 +204,7 @@ public class PieceThreadImpl extends PieceThread {
         try {
             if (rf != null) {
                 rf.close();
-                rf=null;
+                rf = null;
             }
             callback = null;
         } catch (IOException e) {
@@ -222,17 +240,21 @@ public class PieceThreadImpl extends PieceThread {
     public static List<PieceThreadImpl> generateNewPieceList(DownloadInfo info,
                                                              DownloadTask.TaskCallback callback) {
         List<PieceThreadImpl> result = new ArrayList<>();
+        List<PieceInfo> pieceInfos = new ArrayList<>();
         //新任务
         if (info.getThreadCounts() == 1 || !info.isPartialSupport()) {//单线程下载
             result = new ArrayList<>(1);
             PieceThreadImpl thread = new PieceThreadImpl(callback, info.getUuid(), 0, 0, info.getTotalBytes());
             result.add(thread);
+            pieceInfos.add(thread.pieceInfo);
         } else {
             for (int i = 0; i < info.getThreadCounts(); i++) {
                 PieceThreadImpl thread = new PieceThreadImpl(callback, info.getUuid(), i, info.getSplitStart()[i], info.getSplitEnd()[i]);
                 result.add(thread);
+                pieceInfos.add(thread.pieceInfo);
             }
         }
+        info.setPieceInfos(pieceInfos);
         return result;
 
     }

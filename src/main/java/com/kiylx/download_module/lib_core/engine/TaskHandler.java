@@ -15,8 +15,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import com.kiylx.download_module.view.SimpleDownloadInfo;
+import com.kiylx.download_module.view.ViewsAction;
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.functions.Consumer;
@@ -49,7 +53,7 @@ public class TaskHandler {
     private TaskHandler() {
     }
 
-    public TasksCollection getList(int kind) {
+    public TasksCollection getDownloadTaskList(int kind) {
         switch (kind) {
             case DownloadsListKind.wait_kind:
                 return wait;
@@ -59,6 +63,15 @@ public class TaskHandler {
                 return finish;
         }
         return null;
+    }
+
+    public List<SimpleDownloadInfo> getAllSimpleDownloadsInfo() {
+        List<SimpleDownloadInfo> list = new ArrayList<>();
+        list.addAll(wait.covert(ViewsAction.generate));
+        list.addAll(wait.frozenTask.covert(ViewsAction.generate));
+        list.addAll(active.covert(ViewsAction.generate));
+        list.addAll(finish.covert(ViewsAction.generate));
+        return list;
     }
 
     /**
@@ -266,7 +279,7 @@ public class TaskHandler {
 
 
     /**
-     * @param task download task
+     * @param task   download task
      * @param result 任务的执行结果
      */
     private void finallyTaskFinish(DownloadTask task, TaskResult result) {
@@ -372,6 +385,10 @@ public class TaskHandler {
         try (FileInputStream is = new FileInputStream(file)) {
             return (sha256Hash ? DigestUtils.makeSha256Hash(is) : DigestUtils.makeMd5Hash(is));
         }
+
+    }
+
+    public void views() {
 
     }
 }

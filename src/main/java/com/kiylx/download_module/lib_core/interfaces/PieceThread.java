@@ -4,12 +4,20 @@ import com.kiylx.download_module.lib_core.model.PieceInfo;
 import com.kiylx.download_module.lib_core.model.PieceResult;
 import io.reactivex.annotations.NonNull;
 
+import java.sql.Time;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import static com.kiylx.download_module.lib_core.model.StatusCode.*;
 
 public abstract class PieceThread implements Callable<PieceResult> {
+    public static final int BUFFER_SIZE = 8192; //8kib
+    /* 在进度条更新之前必须完成的最小进度量 */
+    public static final int MIN_PROGRESS_STEP = 65536;//64kib
+    /* 更新进度条之前必须经过的最短时间, 单位：ms */
+    public static final long MIN_PROGRESS_TIME = 2000;
+
     public UUID infoId;
     public int blockId = 0;
 
@@ -17,6 +25,7 @@ public abstract class PieceThread implements Callable<PieceResult> {
     protected PieceInfo pieceInfo;
     protected PieceResult pieceResult;
 
+    protected Long currentTimeMillis= System.currentTimeMillis();
     public PieceThread(@NonNull PieceInfo pieceInfo) {
         this.pieceInfo = pieceInfo;
         this.infoId = pieceInfo.getId();
@@ -44,6 +53,7 @@ public abstract class PieceThread implements Callable<PieceResult> {
 
     public void startPlus(long delta) {
         pieceInfo.startPlus(delta);
+        pieceInfo.curBytesPlus(delta);
     }
 
     public long getEnd() {
@@ -61,10 +71,6 @@ public abstract class PieceThread implements Callable<PieceResult> {
 
     public void setCurBytes(long curBytes) {
         pieceInfo.setCurBytes(curBytes);
-    }
-
-    public void curBytesPlus(long delta) {
-        pieceInfo.curBytesPlus(delta);
     }
 
     //这个分块的大小

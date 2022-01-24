@@ -21,6 +21,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static com.kiylx.download_module.ContextKt.getContext;
+import static com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROGRESS_STEP;
+import static com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROGRESS_TIME;
 import static com.kiylx.download_module.lib_core.model.StatusCode.*;
 import static com.kiylx.download_module.lib_core.model.TaskResult.TaskResultCode.*;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
@@ -33,24 +35,26 @@ public class DownloadTaskImpl extends DownloadTask {
     private FileKit fs;
     private FakeFile fakeFile = null;
     private final Repo repo = getContext().getRepo();
+
     public final TaskCallback callback = new TaskCallback() {
         @Override
         public void update(PieceInfo pieceInfo, boolean isRunning) throws NullPointerException {
-            if (repo == null)
-                throw new NullPointerException("repo is null");
             int blockId = pieceInfo.getBlockId();
             info.getSplitStart()[blockId] = pieceInfo.getStart();
             info.getSplitEnd()[blockId] = pieceInfo.getEnd();
             info.setRunning(isRunning);
-            
+            info.getCurrentBytes()[blockId] = pieceInfo.getCurBytes();//更新每个分块已下载的大小
+
+            //更新进度
+            if (repo == null)
+                throw new NullPointerException("repo is null");
             syncInfo(Repo.SyncAction.UPDATE);
             syncPieceInfo(pieceInfo, Repo.SyncAction.UPDATE);
-            repo.updateInfoUI(info);//todo 此处会被新view方式替代
+            calcProgress();
         }
 
         @Override
         public FakeFile getFile() {
-            //return fs.get(info.getPath() + info.getFileName());
             if (fakeFile == null)
                 fakeFile = Objects.requireNonNull(checkDiskAndInitFile()).getFirst();
             return fakeFile;
@@ -72,6 +76,25 @@ public class DownloadTaskImpl extends DownloadTask {
 
     public static DownloadTask instance(DownloadInfo info) {
         return new DownloadTaskImpl(info);
+    }
+
+    private long lastSize = 0L;//上次计算速度时的文件大小
+    private long lastTime = 0L;//上次计算速度时的时间
+
+    //计算速度
+    public void calcProgress() {
+        long currentSize = 0L;
+        long deltaTime = System.currentTimeMillis() - lastTime;
+        for (long j : info.getCurrentBytes()) {
+            currentSize += j;
+        }
+        long deltaSize = currentSize - lastSize;
+        if (deltaTime > MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
+            long speed = deltaSize / deltaTime * 1000; // bytes/s
+            lastTime = System.currentTimeMillis();
+            lastSize = currentSize;
+            info.getSimpleDownloadInfo().setSpeed(speed);
+        }
     }
 
     @Override
@@ -103,6 +126,13 @@ public class DownloadTaskImpl extends DownloadTask {
         TaskResult cleanTaskResult = cleanTask();
         if (cleanTaskResult != null)
             return cleanTaskResult;
+        TaskResult taskResult = runDownload();
+        if (taskResult != null)
+            return taskResult;
+        return new TaskResult(info.getUuid(), TaskResult.TaskResultCode.ERROR, info.getFinalMsg(), info.getFinalCode());
+    }
+
+    private TaskResult runDownload() {
         try {
             VerifyResult verifyResult = execPieceDownload();//执行分块下载
             //todo 应该在execPieceDownload()方法里写入结果   DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
@@ -117,7 +147,7 @@ public class DownloadTaskImpl extends DownloadTask {
             syncInfo(Repo.SyncAction.UPDATE);//结果同步到磁盘
             closeThings();
         }
-        return new TaskResult(info.getUuid(), TaskResult.TaskResultCode.ERROR, info.getFinalMsg(), info.getFinalCode());
+        return null;
     }
 
     private VerifyResult execPieceDownload() {
@@ -240,8 +270,9 @@ public class DownloadTaskImpl extends DownloadTask {
                 return new Pair<>(null, generateVerifyResult(STATUS_ERROR, "CAN NOT INIT FILE!", ERROR));
             FakeFile file = fs.create(info.getPath(), true);
             return new Pair<>(file, null);
+        } else {
+            return new Pair<>(fs.find(info.getPath()), null);
         }
-        return null;
     }
 
     /**

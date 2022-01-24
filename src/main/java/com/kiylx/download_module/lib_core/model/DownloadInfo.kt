@@ -1,5 +1,6 @@
 package com.kiylx.download_module.lib_core.model
 
+import com.kiylx.download_module.lib_core.engine.PieceThreadImpl
 import com.kiylx.download_module.view.SimpleDownloadInfo
 import com.kiylx.download_module.view.genSimpleDownloadInfo
 import java.util.UUID
@@ -69,41 +70,27 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
     var splitStart: Array<Long> = emptyArray()
     var splitEnd: Array<Long> = emptyArray()
 
-    /**
-     * 当前文件已下载的大小,
-     * 需要百分比的话，用contentLength和totalLength自行计算，结果要转成float类型
-     */
-//todo 计算下载速度和累积下载长度
-    var currentLength: Long = 0
-        get() {
-            var unDownloadPart: Long = 0 //未下载的部分
-            for (i in 0 until threadCounts) {
-                unDownloadPart += splitEnd[i] - splitStart[i] + 1
-            }
-            //设置已下载的长度
-            currentLength = totalBytes - unDownloadPart
-            return field
+    /**每个分块的已下载大小 实际上可以通过 spiltStart和splitEnd计算出来*/
+    var currentBytes: LongArray = longArrayOf()
+
+    fun getDownloadedSize(): Long {
+        var size: Long = 0L
+        for (i in currentBytes) {
+            size += i
         }
-        set(value) {
-            field = value
-            simpleDownloadInfo.currentLength = value
-        }
+        return size
+    }
+
+    fun getPercent(): Long {
+        return (getDownloadedSize() / totalBytes) //返回已下载百分比
+    }
 
     val isDownloadSuccess: Boolean
         get() = finalCode == StatusCode.STATUS_SUCCESS
-
-    /**
-     * @return 返回下载进度, float类型
-     * 文件的下载线程数就是文件分块的标号，
-     * 那么分块的结束减去分块的开始就是未下载的部分
-     */
-    val percent: Float
-        get() = currentLength.toFloat() / totalBytes.toFloat()//返回已下载百分比
-    val intPercent: Int
-        get() = (currentLength.toFloat() / totalBytes.toFloat() * 100).toInt()
     val uUIDString: String
         get() = uuid.toString()
 
+    var pieceInfos: MutableList<PieceInfo> = mutableListOf()
     var pieceResultArray: Array<PieceResult>? = null//分块的结果，目前还没有使用
 
     var checkSum: String? = null // MD5, SHA-256。 添加下载生成downloadinfo时添加，也可不添加 。若添加此值，在下载完成时，会校验此值
@@ -191,6 +178,11 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
             info.finalCode = finalCode
             info.finalMsg = msg
         }
+
+        @JvmStatic
+        fun calcSpeed(info: DownloadInfo) {
+
+        }
     }
 }
 
@@ -209,6 +201,9 @@ class PieceInfo @JvmOverloads constructor(
     var finalCode: Int = StatusCode.STATUS_INIT,
     var msg: String? = null,
 ) {
+
+    var speed: Long = 0L
+
     fun startPlus(delta: Long) {
         start += delta
     }
