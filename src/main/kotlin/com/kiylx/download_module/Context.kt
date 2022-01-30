@@ -8,12 +8,17 @@ import com.kiylx.download_module.lib_core.engine.TaskHandler
 import com.kiylx.download_module.lib_core.interfaces.VerifyFactory
 import com.kiylx.download_module.lib_core.model.VerifyFactoryImpl
 import com.kiylx.download_module.lib_core.interfaces.Repo
+import com.kiylx.download_module.lib_core.network.HttpManager
 import com.kiylx.download_module.lib_core.repository.RepoImpl
 import com.kiylx.download_module.utils.kotlin.CDelegate
 
 class Context(configs: ContextConfigs) {
     private var setting: Context.ContextConfigs = configs
     var limit = setting.limit
+
+    /**
+     * 下载时使用的线程数默认期待值，但受到实际情况的限制，在不支持多线程下载的情况下，不一定会使用此值
+     */
     var defaultThreadNum = setting.threadNum//DownloadInfo中线程数不存在或不合法时使用这里的缺省值
     var userAgent = setting.userAgent
     var repo: Repo? = null
@@ -30,14 +35,14 @@ class Context(configs: ContextConfigs) {
             return field
         }
 
-    val SysCallKit: SysCall by CDelegate(setting.sysCallClazz,::SysCallImpl)
+    val SysCallKit: SysCall by CDelegate(setting.sysCallClazz, ::SysCallImpl)
 
     val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz,
         ::FileKitImpl)
 
     val taskHandler: TaskHandler by lazy { TaskHandler.getInstance() }
     val verifyFactory: VerifyFactory by lazy { VerifyFactoryImpl() }
-
+    val httpManager: HttpManager by lazy { HttpManager.getInstance() }
 
     companion object {
         const val updateViewInterval: Long = 2000L

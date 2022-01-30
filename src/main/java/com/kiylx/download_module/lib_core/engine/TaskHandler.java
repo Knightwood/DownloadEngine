@@ -18,11 +18,18 @@ import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.function.*;
 
 import com.kiylx.download_module.view.SimpleDownloadInfo;
 import com.kiylx.download_module.view.ViewsAction;
 import io.reactivex.Observable;
+import io.reactivex.Observer;
 import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 
@@ -83,10 +90,12 @@ public class TaskHandler {
      */
     public boolean addDownloadTask(DownloadTask task) {
         if (isMaxActiveDownloads()) {
+            System.out.println("队列满了，等待下载");
             wait.add(task);
             task.setLifecycleState(TaskLifecycle.START);
             return false;
         } else {
+            System.out.println("队列没满，执行下载");
             active.add(task);
             runTask(task);
             return true;
@@ -184,20 +193,52 @@ public class TaskHandler {
      *
      * @param task downloadTask
      */
-    private void runTask(DownloadTask task) {
+    private void runTask(DownloadTask task) {//如果这里开启线程去执行下载，那么前面就能拿到info.而不用等待下载过程带来的阻塞
+       /* FutureTask<TaskResult> taskFuture = new FutureTask<TaskResult>(task);
+        new Thread(taskFuture).start();
+        try {
+            TaskHandler.this.finallyTaskFinish(task, taskFuture.get());
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+        try {
+            task.call();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }*/
+
+        /*CompletableFuture<TaskResult> future = CompletableFuture.supplyAsync((Supplier<TaskResult>) () -> {
+                    try {
+                        return (TaskResult) task.call();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }).whenComplete(new BiConsumer<TaskResult, Throwable>() {
+                    @Override
+                    public void accept(TaskResult taskResult, Throwable throwable) {
+                        System.out.println("下载任务执行结束: " + (taskResult == null));
+                        TaskHandler.this.finallyTaskFinish(task, taskResult);
+                    }
+                })
+                .exceptionally(new Function<Throwable, TaskResult>() {
+                    @Override
+                    public TaskResult apply(Throwable throwable) {
+                        Log.e("Getting info " + task.getInfo().getUUIDString() + " error: " +
+                                throwable.getMessage());
+                        return null;
+                    }
+                });*/
         disposables.add(Observable.fromCallable(task)
                 .subscribeOn(Schedulers.io())
                 .observeOn(Schedulers.computation())
                 .subscribe(new Consumer<TaskResult>() {
                                @Override
-                               public void accept(TaskResult result) {
-                                   TaskHandler.this.finallyTaskFinish(task, result);
+                               public void accept(TaskResult taskResult) throws Exception {
+                                   System.out.println("下载任务执行结束");
+                                   TaskHandler.this.finallyTaskFinish(task, taskResult);
                                }
-                           },
-                        (Throwable t) -> {
-                            Log.e("Getting info " + task.getInfo().getUUIDString() + " error: " +
-                                    Log.getStackTraceString(t));
-                        }
+                           }
                 )
         );
     }

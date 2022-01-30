@@ -1,14 +1,11 @@
 package com.kiylx.download_module.lib_core.model
 
-import com.kiylx.download_module.lib_core.engine.PieceThreadImpl
-import com.kiylx.download_module.view.SimpleDownloadInfo
 import com.kiylx.download_module.view.genSimpleDownloadInfo
-import java.util.UUID
-import java.io.File
 import java.lang.IllegalArgumentException
+import java.util.*
 
-class DownloadInfo(var url: String, var path: String, var fileName: String = "", threadNum: Int = 1) {
-
+class DownloadInfo(var url: String, var fileFolder: String, var fileName: String = "") {
+    var path: String = ""
     var uuid: UUID? = null
         //标识唯一信息
         get() {
@@ -67,16 +64,19 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
             field = value
         }
     var blockSize: Long = -1//下载时根据分配线程数量（threadNum）决定的文件分块大小。（最后一个分块可能会小于或大于其他分块大小）
-    var splitStart: Array<Long> = emptyArray()
-    var splitEnd: Array<Long> = emptyArray()
+    var splitStart: Array<Long?> = emptyArray()
+    var splitEnd: Array<Long?> = emptyArray()
 
     /**每个分块的已下载大小 实际上可以通过 spiltStart和splitEnd计算出来*/
-    var currentBytes: LongArray = longArrayOf()
+    //var currentBytes: LongArray = longArrayOf()
+    var currentBytes: Array<Long?> = arrayOfNulls(threadCounts)
 
     fun getDownloadedSize(): Long {
         var size: Long = 0L
         for (i in currentBytes) {
-            size += i
+            if (i != null) {
+                size += i
+            }
         }
         return size
     }
@@ -118,14 +118,6 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
         genSimpleDownloadInfo(info = this)
     }
 
-
-    init {
-        if (fileName == "") {
-            this.fileName = url.substring(url.lastIndexOf(File.separator))  //斜杠不能丢，因为是路径加文件名，如果文件名不包含“/”，那路径会不正确会出错
-        }
-        this.threadCounts = threadNum
-    }
-
     companion object {
         /*
      * The minimum amount of time that the download manager accepts for
@@ -151,8 +143,9 @@ class DownloadInfo(var url: String, var path: String, var fileName: String = "",
                 val blockSize = info.totalBytes / threadNum
                 info.blockSize = blockSize
                 //建立数组准备存储分块信息
-                info.splitStart = arrayOf()
-                info.splitEnd = arrayOf()
+                info.splitStart = arrayOfNulls(threadNum)
+                info.splitEnd = arrayOfNulls(threadNum)
+
                 for (i in 0 until info.threadCounts) {
                     //为新任务，根据文件长度填写分块信息
                     info.splitStart[i] = i * blockSize

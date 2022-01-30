@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
-public abstract class DownloadTask implements Callable<TaskResult> {
+public abstract class DownloadTask implements Callable<TaskResult>{
     public int moveState = 0;
     private LifecycleCollection lifecycle;
-    private boolean recoveryFromDisk=false;
+    private boolean recoveryFromDisk = false;
 
     public DownloadTask() {
         lifecycle = new LifecycleCollection();
@@ -85,7 +85,9 @@ public abstract class DownloadTask implements Callable<TaskResult> {
      */
     public interface TaskCallback {
         void update(PieceInfo pieceInfo, boolean isRunning) throws NullPointerException;//pieceTask另task通知repo更新信息
+
         FakeFile getFile();
+
         DownloadInfo getDownloadInfo();
     }
 

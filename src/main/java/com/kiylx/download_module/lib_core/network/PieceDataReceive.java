@@ -1,4 +1,4 @@
-package com.kiylx.download_module.lib_core.repository;
+package com.kiylx.download_module.lib_core.network;
 
 import com.kiylx.download_module.lib_core.interfaces.ConnectionListener;
 import com.kiylx.download_module.lib_core.interfaces.RemoteRepo;
@@ -36,13 +36,13 @@ public class PieceDataReceive implements RemoteRepo {
          */
         builder.addHeader("Connection", "close");
         HeaderStore[] eTag = getContext().getRepo().getHeadersByName(info.getUuid(), "ETag");
-        if (eTag != null)
+        if (eTag != null && eTag.length > 0)
             builder.addHeader("If-Match", eTag[0].value);
         if (start != -1 && end != -1)//支持分块
             builder.addHeader("Range", "bytes=" + start + "-" + end);
         Request request = builder.build();
         //请求网络
-        HttpManager.getInstance().getResponse(request, connectionListener);
+        getContext().getHttpManager().getResponse(request, connectionListener);
     }
 
 }

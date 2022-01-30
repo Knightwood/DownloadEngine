@@ -154,7 +154,7 @@ public class WaitingDownloadQueue implements TasksCollection {
      * @param id uuid
      * @return 返回在等待下载队列或暂停下载队列中查到的task
      */
-    public DownloadTask queueTask(UUID id) {
+    public DownloadTask queryTask(UUID id) {
         DownloadTask task = null;
         task = findTask(id);
         if (task != null) {
@@ -228,7 +228,10 @@ public class WaitingDownloadQueue implements TasksCollection {
 
         @Override
         public DownloadTask findTaskInFrozen(UUID id) {
-            return frozen.get(findTaskPosInFrozen(id));
+            int i = findTaskPosInFrozen(id);
+            if (i < 0 || i > frozen.size())
+                return null;
+            return frozen.get(i);
         }
 
         @Override

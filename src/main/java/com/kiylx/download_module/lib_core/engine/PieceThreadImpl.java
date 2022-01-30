@@ -6,7 +6,7 @@ import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
 import com.kiylx.download_module.lib_core.interfaces.PieceThread;
 import com.kiylx.download_module.lib_core.interfaces.Repo;
 import com.kiylx.download_module.lib_core.model.*;
-import com.kiylx.download_module.lib_core.repository.PieceDataReceive;
+import com.kiylx.download_module.lib_core.network.PieceDataReceive;
 import io.reactivex.annotations.NonNull;
 import okhttp3.Response;
 
@@ -21,8 +21,8 @@ import java.util.UUID;
 
 import static com.kiylx.download_module.ContextKt.getContext;
 import static com.kiylx.download_module.lib_core.model.StatusCode.*;
-import static com.kiylx.download_module.lib_core.repository.TaskDataReceive.getUnhandledHttpError;
-import static com.kiylx.download_module.lib_core.repository.TaskDataReceive.parseUnavailableHeaders;
+import static com.kiylx.download_module.lib_core.network.TaskDataReceive.getUnhandledHttpError;
+import static com.kiylx.download_module.lib_core.network.TaskDataReceive.parseUnavailableHeaders;
 import static java.net.HttpURLConnection.*;
 
 public class PieceThreadImpl extends PieceThread {
@@ -31,12 +31,10 @@ public class PieceThreadImpl extends PieceThread {
     private final ConnectionListener connectionListener = new ConnectionListener() {
         @Override
         public void onResponseHandle(Response response, int code, String message) {
+            System.out.println("分块的response: " + code);
             switch (code) {
                 case HTTP_OK:
                 case HTTP_PARTIAL:
-                    boolean b = verifyResponse(response);//验证未通过，return
-                    if (!b)
-                        break;
                     transferData(response);
                     break;
                 case HTTP_PRECON_FAILED:
@@ -93,6 +91,7 @@ public class PieceThreadImpl extends PieceThread {
     public PieceThreadImpl(DownloadTask.TaskCallback callback, @NonNull PieceInfo pieceInfo) {
         super(pieceInfo);
         this.callback = callback;
+        isRunning = true;//Very important 。 After investigating the bug for a long time, I finally found that it was because this value was not set here。fuck！！！
     }
 
     @Override
@@ -131,23 +130,33 @@ public class PieceThreadImpl extends PieceThread {
                 }
 
             } catch (NumberFormatException e) {
+                e.printStackTrace();
                 generatePieceResult(STATUS_CANNOT_RESUME,
                         "Can't know size of download, giving up");
                 return false;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
             }
         }
+        System.out.println("分块校验成功");
         return true;
     }
 
     private void transferData(Response response) {
+        System.out.println("传输数据");
+        if (!verifyResponse(response))//验证未通过，return
+            return;
         if (response.body() != null) {
+            System.out.println("开写");
             try (InputStream inputStream = Objects.requireNonNull(response.body()).byteStream()) {
-
+                System.out.println("尝试获得输入");
                 byte[] b = new byte[BUFFER_SIZE];
                 //从流中读取的数据长度
                 int len;
                 //流没有读尽和没有暂停时执行循环以写入文件
                 while (((len = inputStream.read(b)) != -1) && isRunning) {
+                    System.out.println("每次写入" + len);
                     rf.write(b, 0, len);
                     startPlus(len);//累加进度
                     if (callback != null)
@@ -156,9 +165,11 @@ public class PieceThreadImpl extends PieceThread {
                 }
                 //流没有读尽且暂停时的处理
                 if ((!isRunning) && len != -1) {
+                    System.out.println("暂停");
                     //暂停
                     generatePieceResult(pieceCode.stop, "Stop");
                 } else {
+                    System.out.println("完成下载");
                     //完成无误； 如果已知，则验证长度
                     if (getTotalBytes() != -1 && getCurBytes() != getEnd() + 1) {
                         generatePieceResult(STATUS_HTTP_DATA_ERROR,
@@ -169,6 +180,7 @@ public class PieceThreadImpl extends PieceThread {
                 }
 
             } catch (Throwable e) {
+                e.printStackTrace();
                 generatePieceResult(pieceCode.error, "some thing wrong", e);
             } finally {
                 if (callback != null)
@@ -180,7 +192,8 @@ public class PieceThreadImpl extends PieceThread {
 
     private long currentTime = 0L;
     private long currentSize = 0L;
-//未使用
+
+    //未使用
     private void updateProgress(long len) {
         startPlus(len);//累加
         long deltaTime = System.currentTimeMillis() - currentTime;
@@ -188,7 +201,7 @@ public class PieceThreadImpl extends PieceThread {
 
         if (deltaTime > MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
             currentTime = System.currentTimeMillis();
-            currentSize=getCurBytes();
+            currentSize = getCurBytes();
 
             long speed = deltaSize / deltaTime * 1000; // bytes/s
             pieceInfo.setSpeed(speed);

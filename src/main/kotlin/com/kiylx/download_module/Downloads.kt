@@ -12,9 +12,14 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
         private set
     private val mTaskHandler = mContext.taskHandler
 
-    fun execDownloadTask(url: String, path: String, fileName: String = "", threadNum: Int = 1) {
-        val info = DownloadInfo(url, path, fileName, threadNum)
-        execDownloadTask(info)
+    init {
+        mTaskHandler.setLimit(configs.limit)
+    }
+
+    fun execDownloadTask(url: String, path: String, fileName: String = ""): DownloadInfo {
+        val info = DownloadInfo(url, path, fileName)
+        execDownloadTask(info)// 这里会变成耗时逻辑，不会立马返回info
+        return info
     }
 
     fun execDownloadTask(info: DownloadInfo, fromDisk: Boolean = false) {
@@ -24,31 +29,9 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
         runDownloadTask(task)
     }
 
-    private fun runDownloadTask(task: DownloadTask) {
-        mTaskHandler.addDownloadTask(task)
-    }
-
-    fun pauseDownload(info: DownloadInfo) {
-        val id = info.uuid
-        pauseDownload(id)
-    }
-
-    private fun pauseDownload(task: DownloadTask) {
-        val id = task.info.uuid
-        pauseDownload(id)
-    }
-
-
-    fun pauseDownload(id: UUID?) {
-        if (id == null)
-            return
-        mTaskHandler.requestPauseTask(id)
-    }
-
-    fun cancelTask(id: UUID?) {
-        mTaskHandler.requestCancelTask(id)
-    }
-
+    fun pauseDownload(id: UUID) = mTaskHandler.requestPauseTask(id)
+    fun resumeTask(id: UUID) = mTaskHandler.resumeTask(id)
+    fun cancelTask(id: UUID?) = mTaskHandler.requestCancelTask(id)
 
     /**
      * @param kind :DownloadsListKind中定义
@@ -66,6 +49,15 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
     @Deprecated("不该使用")
     fun getDownloadsInfoList(kind: Int): MutableList<SimpleDownloadInfo>? {
         return mContext.repo?.queryList(kind)
+    }
+
+    private fun runDownloadTask(task: DownloadTask) {
+        mTaskHandler.addDownloadTask(task)
+    }
+
+    private fun pauseDownload(task: DownloadTask) {
+        val id = task.info.uuid
+        id?.let { pauseDownload(it) }
     }
 
     companion object {

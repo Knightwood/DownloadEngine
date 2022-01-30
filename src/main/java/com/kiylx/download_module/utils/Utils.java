@@ -4,6 +4,7 @@ import io.reactivex.annotations.NonNull;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
@@ -12,12 +13,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.kiylx.download_module.ContextKt.getContext;
-import static com.kiylx.download_module.fileskit.FileUtils.getExtension;
 
 public class Utils {
     public static final String INFINITY_SYMBOL = "\u221e";
     public static final String HTTP_PREFIX = "http";
     public static final String DEFAULT_DOWNLOAD_FILENAME = "downloadfile";
+    public static final String EXTENSION_SEPARATOR = ".";
 
     /*
      * Format as defined in RFC 2616 and RFC 5987.
@@ -262,5 +263,19 @@ public class Utils {
 
     public static boolean checkConnectivity() {
         return getContext().getSysCallKit().checkConnectivity();
+    }
+
+    public static String getExtension(String fileName) {
+        if (fileName == null)
+            return null;
+
+        int extensionPos = fileName.lastIndexOf(EXTENSION_SEPARATOR);
+        int lastSeparator = fileName.lastIndexOf(File.separator);
+        int index = (lastSeparator > extensionPos ? -1 : extensionPos);
+
+        if (index == -1)
+            return "";
+        else
+            return fileName.substring(index + 1);
     }
 }

@@ -1,4 +1,4 @@
-package com.kiylx.download_module.lib_core.repository;
+package com.kiylx.download_module.lib_core.network;
 
 import com.kiylx.download_module.lib_core.interfaces.RemoteRepo;
 import com.kiylx.download_module.lib_core.interfaces.Repo;
@@ -6,14 +6,18 @@ import com.kiylx.download_module.lib_core.model.DownloadInfo;
 import com.kiylx.download_module.lib_core.model.VerifyResult;
 import com.kiylx.download_module.lib_core.interfaces.ConnectionListener;
 import com.kiylx.download_module.lib_core.network.HttpManager;
+import com.kiylx.download_module.lib_core.repository.sqlite.DownloadDb;
 import com.kiylx.download_module.utils.DateUtils;
 import com.kiylx.download_module.utils.TextUtils;
+import com.kiylx.download_module.utils.java_log_pack.Log;
 import io.reactivex.annotations.NonNull;
+import io.reactivex.annotations.Nullable;
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
+import java.io.File;
 import java.io.IOException;
 
 import static com.kiylx.download_module.ContextKt.getContext;
@@ -23,24 +27,26 @@ import static java.net.HttpURLConnection.*;
 
 public class TaskDataReceive implements RemoteRepo {
     /**
-     * @param info
+     * @param info    解析得到的网络数据会写入info
      * @param queryDb true:查询数据库，恢复存储起来的header数据； false：新任务，不需要查询数据库
      * @return
      */
+    @Nullable
     public static VerifyResult fetchMetaData(DownloadInfo info, boolean queryDb) {
-    //构建request
-        Request request;
+        System.out.println("获得meta信息");
+
         final VerifyResult[] result = new VerifyResult[1];
         Request.Builder builder = new Request.Builder()
-                .url(info.getUrl());
+                .url(info.getUrl());//构建request
         if (!TextUtils.isEmpty(info.getUserAgent())) {
             builder.addHeader("User-Agent", info.getUserAgent());
         }
-        request = builder.build();
+        System.out.println("调用getResponse方法");
         try {//尝试请求，获得结果并解析
-            HttpManager.getInstance().getResponse(request, new ConnectionListener() {
+            getContext().getHttpManager().getResponse(builder.build(), new ConnectionListener() {
                 @Override
                 public void onResponseHandle(Response response, int code, String message) {
+                    System.out.println("网络回应：" + code);
                     switch (code) {
                         case HTTP_OK:
                             result[0] = parseHeaders(info, response, queryDb);
@@ -78,17 +84,17 @@ public class TaskDataReceive implements RemoteRepo {
 
                 }
             });
-
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             Repo repo = getContext().getRepo();
-                    if( result[0]!=null)
-                            DownloadInfo.modifyMsg(info, result[0]);//下载结果写入DownloadInfo
+            if (result[0] != null)
+                DownloadInfo.modifyMsg(info, result[0]);//下载结果写入DownloadInfo
             if (repo != null) {
                 repo.syncInfoToDisk(info, Repo.SyncAction.UPDATE);//更新存储库中downloadInfo信息
             }
         }
         return result[0];
-
     }
 
     /**
@@ -99,10 +105,12 @@ public class TaskDataReceive implements RemoteRepo {
      * @return
      */
     private static VerifyResult parseHeaders(DownloadInfo info, Response response, boolean queryDb) {
+        System.out.println("解析headers");
         ResponseBody body = response.body();
         Repo repo = getContext().getRepo();
         MediaType mimetype = null;
         String fileName = null;
+        String ext = null;
         if (body != null) {
             mimetype = body.contentType();
         }
@@ -135,8 +143,11 @@ public class TaskDataReceive implements RemoteRepo {
         //更新downloadInfo部分信息
         if (mimetype != null && !mimetype.type().equals(info.getMimeType()))
             info.setMimeType(mimetype.type());
-        if (fileName != null && info.getFileName().isEmpty())
+
+        if (info.getFileName().isEmpty()) {
             info.setFileName(fileName);
+        }
+        info.setPath(info.getFileFolder() + File.pathSeparator + fileName);
 
         final String transferEncoding = response.header("Transfer-Encoding");
         if (transferEncoding == null) {
@@ -144,7 +155,9 @@ public class TaskDataReceive implements RemoteRepo {
         } else {
             info.setTotalBytes(-1);//长度未知
         }
-        info.setPartialSupport("bytes".equalsIgnoreCase(response.header("Accept-Ranges")));//是否支持断点请求
+        boolean partialSupport = "bytes".equalsIgnoreCase(response.header("Accept-Ranges"));
+        info.setPartialSupport(partialSupport);//是否支持断点请求
+        info.setThreadCounts(partialSupport ? getContext().getDefaultThreadNum() : 1);
         String eTagValue = response.header("ETag");
         repo.updateHeader(info.getUuid(), "ETag", eTagValue);
 
@@ -154,6 +167,8 @@ public class TaskDataReceive implements RemoteRepo {
         info.setHasMetadata(true);
         info.setFinalCode(STATUS_RUNNING);
         repo.syncInfoToDisk(info, Repo.SyncAction.UPDATE);//更新存储库中downloadInfo信息
+        System.out.println("解析结束");
+        DownloadInfo info1 = info;
         return null;
     }
 

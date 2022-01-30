@@ -65,12 +65,6 @@ public interface Repo {
     public void syncPieceInfoToDisk(PieceInfo info, SyncAction action);
 
 
-//UI
-    /**
-     * 更新界面
-     */
-    void updateInfoUI(DownloadInfo info);
-
     /**
      * @param kind DownloadsListKind类中定义
      * @return 返回kind类型的下载信息集合

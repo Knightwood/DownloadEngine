@@ -13,7 +13,6 @@ import java.util.UUID;
 
 public class RepoImpl implements Repo {
     private static volatile Repo mRepo;
-    private UI uiInterface;
 
     public static Repo getInstance() {
         if (mRepo == null) {
@@ -74,15 +73,6 @@ public class RepoImpl implements Repo {
     }
 
     @Override
-    public void updateInfoUI(DownloadInfo info) {
-        //更新存储库信息
-        //更新界面
-        if (uiInterface != null)
-            uiInterface.updateUI(info);
-
-    }
-
-    @Override
     public List<SimpleDownloadInfo> queryList(int kind) {
         return null;
     }
@@ -114,8 +104,4 @@ public class RepoImpl implements Repo {
 
     }
 
-
-    public interface UI {
-        public void updateUI(DownloadInfo info);
-    }
 }

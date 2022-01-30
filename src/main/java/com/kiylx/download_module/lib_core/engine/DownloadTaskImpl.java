@@ -6,9 +6,8 @@ import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
 import com.kiylx.download_module.lib_core.interfaces.PieceThread;
 import com.kiylx.download_module.lib_core.interfaces.Repo;
 import com.kiylx.download_module.lib_core.model.*;
-import com.kiylx.download_module.lib_core.repository.TaskDataReceive;
+import com.kiylx.download_module.lib_core.network.TaskDataReceive;
 import com.kiylx.download_module.utils.Utils;
-import com.kiylx.download_module.utils.java_log_pack.Log;
 import io.reactivex.annotations.NonNull;
 import kotlin.Pair;
 
@@ -122,41 +121,51 @@ public class DownloadTaskImpl extends DownloadTask {
 
     @Override
     public TaskResult call() {
-        initTask();
-        TaskResult cleanTaskResult = cleanTask();
-        if (cleanTaskResult != null)
-            return cleanTaskResult;
-        TaskResult taskResult = runDownload();
-        if (taskResult != null)
-            return taskResult;
-        return new TaskResult(info.getUuid(), TaskResult.TaskResultCode.ERROR, info.getFinalMsg(), info.getFinalCode());
+        try {
+            initTask();
+            TaskResult cleanTaskResult = cleanTask();
+            if (cleanTaskResult != null)
+                return cleanTaskResult;
+            TaskResult taskResult = runDownload();
+            if (taskResult != null)
+                return taskResult;
+            return new TaskResult(info.getUuid(), TaskResult.TaskResultCode.ERROR, info.getFinalMsg(), info.getFinalCode());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private TaskResult runDownload() {
+        System.out.println("下载任务：runDownload方法被调用");//这里有被调用，正常
         try {
             VerifyResult verifyResult = execPieceDownload();//执行分块下载
             //todo 应该在execPieceDownload()方法里写入结果   DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
             return new TaskResult(info.getUuid(), verifyResult);
         } catch (Throwable t) {
-            Log.e(Log.getStackTraceString(t));
+            t.printStackTrace();
             if (info != null) {
                 DownloadInfo.modifyMsg(info, STATUS_UNKNOWN_ERROR, t.getMessage());//下载结果写入DownloadInfo
             }
         } finally {
-            setLifecycleState(TaskLifecycle.STOP);
+            setLifecycleState(TaskLifecycle.STOP);//todo ????
             syncInfo(Repo.SyncAction.UPDATE);//结果同步到磁盘
             closeThings();
         }
         return null;
     }
 
-    private VerifyResult execPieceDownload() {
+    private VerifyResult execPieceDownload() {//在这停顿。这里必须阻塞，等待下载完成才可以返回，提前返回肯定不对
         VerifyResult verifyResult = null;
         List<Future<PieceResult>> futureList = Collections.emptyList();//存储分块任务（callable）的返回结果（future）
         setLifecycleState(TaskLifecycle.RUNNING);
 
         boolean shouldQueryDb = (isRecoveryFromDisk() || info.getRetryCount() > 0);//旧任务或者尝试重新下载的任务
-        VerifyResult metaResult = TaskDataReceive.fetchMetaData(info, shouldQueryDb);//验证连接有效性
+        //验证连接有效性
+        System.out.println("调用fetchMetaData之前");
+        VerifyResult metaResult;
+        metaResult= TaskDataReceive.fetchMetaData(info, shouldQueryDb);
+        // fetchMetaData出了问题，程序执行到这里就结束了，难道有异常没有捕获吗？？
         if (metaResult != null)
             return metaResult;
         if (info.getTotalBytes() == 0) {
@@ -166,6 +175,7 @@ public class DownloadTaskImpl extends DownloadTask {
         if (!Utils.checkConnectivity()) {
             return generateVerifyResult(STATUS_WAITING_FOR_NETWORK, "LOST CONNECTING", FAILED);
         }
+        System.out.println("调用fetchMetaData之后，创建分块执行下载");
         try {//创建分块执行下载
             Pair<FakeFile, VerifyResult> fileVerifyResultPair = checkDiskAndInitFile();//创建文件
             if (fileVerifyResultPair.getSecond() != null) {
@@ -178,13 +188,12 @@ public class DownloadTaskImpl extends DownloadTask {
             info.reduceRetryCount();
             setRecoveryFromDisk(false);
             //Wait all threads
+            System.out.println("等待线程池下载完成");
             futureList = exec.invokeAll(pieceThreads);
 
-        } catch (InterruptedException e) {
-            System.out.println(Thread.currentThread().getName() + "被中断, 中断标识: " + Thread.currentThread().isInterrupted());
-            // 中断后停止当前线程
-            Thread.interrupted();
-
+        } catch (Exception e) {
+            e.printStackTrace();
+            //System.out.println(Thread.currentThread().getName() + "被中断, 中断标识: " + Thread.currentThread().isInterrupted());
             verifyResult = parseResult(futureList);
             return verifyResult;
         } finally {
@@ -202,6 +211,9 @@ public class DownloadTaskImpl extends DownloadTask {
     private VerifyResult parseResult(List<Future<PieceResult>> futureList) {
         if (info.getFinalCode() == HTTP_UNAVAILABLE) {
             return generateVerifyResult(STATUS_WAITING_TO_RETRY, "waiting network to retry download", FAILED);
+        }
+        if (futureList == null || futureList.isEmpty()) {
+            return generateVerifyResult(STATUS_ERROR, "something wrong", FAILED);
         }
         if (futureList.size() != info.getThreadCounts())
             return generateVerifyResult(STATUS_ERROR, "some piece download failed", FAILED);
