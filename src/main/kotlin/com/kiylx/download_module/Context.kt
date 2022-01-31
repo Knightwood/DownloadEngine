@@ -12,7 +12,7 @@ import com.kiylx.download_module.lib_core.network.HttpManager
 import com.kiylx.download_module.lib_core.repository.RepoImpl
 import com.kiylx.download_module.utils.kotlin.CDelegate
 
-class Context(configs: ContextConfigs) {
+class Context private constructor(configs: ContextConfigs) {
     private var setting: Context.ContextConfigs = configs
     var limit = setting.limit
 
@@ -40,7 +40,7 @@ class Context(configs: ContextConfigs) {
     val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz,
         ::FileKitImpl)
 
-    val taskHandler: TaskHandler by lazy { TaskHandler.getInstance() }
+    val taskHandler: TaskHandler by lazy { TaskHandler.getInstance(limit) }
     val verifyFactory: VerifyFactory by lazy { VerifyFactoryImpl() }
     val httpManager: HttpManager by lazy { HttpManager.getInstance() }
 
@@ -48,8 +48,20 @@ class Context(configs: ContextConfigs) {
         const val updateViewInterval: Long = 2000L
         const val defaultUserAgent =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.106 Safari/537.36"
-        const val downloadLimit = 5 //默认下载任务数量限制
-        const val downloadThreadNum = 8 //默认下载线程数
+        const val defaultDownloadLimit = 3 //默认下载任务数量限制
+        const val defaultDownloadThreadNum = 8 //默认下载线程数
+
+        var singleton:Context?=null
+        fun getContextSingleton(configs: ContextConfigs):Context{
+            if (singleton==null){
+                synchronized(Context::class.java){
+                    if (singleton==null){
+                        singleton= Context(configs)
+                    }
+                }
+            }
+            return singleton!!
+        }
     }
 
 
@@ -57,16 +69,16 @@ class Context(configs: ContextConfigs) {
         var repoClazz: Class<out Repo>? = null
         var fileKitClazz: Class<out FileKit<*>>? = null
         var sysCallClazz: Class<out SysCall>? = null
-        var limit = downloadLimit
-        var threadNum = downloadThreadNum
+        var limit = defaultDownloadLimit
+        var threadNum = defaultDownloadThreadNum
         var userAgent = defaultUserAgent
     }
 
 }
 
 /**
- * 不应在downloads初始化之前调用
+ * 不应在得到Context单例之前调用，在得到单例之前调用，理应崩溃
  */
 fun getContext(): Context {
-    return Downloads.downloadsInstance().mContext
+    return Context.singleton!!
 }

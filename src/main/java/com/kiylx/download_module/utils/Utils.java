@@ -68,7 +68,7 @@ public class Utils {
      */
     public static String[] parseMIMEType(String tmpUrl, String contentDisposition, String contentLocation) {
         String fileName = getHttpFileName(tmpUrl, contentDisposition, contentLocation, null);
-        String extension = getExtension(fileName);
+        String extension = PassFileNameGetExtension(fileName);
         String mimeType = null;
         if (!TextUtils.isEmpty(extension))
             mimeType = MimeTypeUtils.guessMimeTypeFromExtension(extension);
@@ -265,7 +265,13 @@ public class Utils {
         return getContext().getSysCallKit().checkConnectivity();
     }
 
-    public static String getExtension(String fileName) {
+    /**
+     * 例如："filename.exe"
+     * 将会返回".exe"
+     * @param fileName 带有扩展名称的文件名
+     * @return 返回“ .扩展名”
+     */
+    public static String PassFileNameGetExtension(String fileName) {
         if (fileName == null)
             return null;
 
@@ -276,6 +282,6 @@ public class Utils {
         if (index == -1)
             return "";
         else
-            return fileName.substring(index + 1);
+            return fileName.substring(index);
     }
 }

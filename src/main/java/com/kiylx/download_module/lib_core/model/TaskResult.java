@@ -31,6 +31,13 @@ public class TaskResult {
         }
     }
 
+    /**
+     *
+     * @param infoId uuid
+     * @param taskResultCode {@link TaskResultCode}
+     * @param msg message
+     * @param finalCode {@link StatusCode}
+     */
     public TaskResult(UUID infoId, TaskResultCode taskResultCode, String msg, int finalCode) {
         this.infoId = infoId;
         this.taskResultCode = taskResultCode;

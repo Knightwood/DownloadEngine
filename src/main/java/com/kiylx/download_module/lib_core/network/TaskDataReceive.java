@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import static com.kiylx.download_module.ContextKt.getContext;
 import static com.kiylx.download_module.lib_core.model.StatusCode.*;
+import static com.kiylx.download_module.utils.Utils.EXTENSION_SEPARATOR;
 import static com.kiylx.download_module.utils.Utils.parseMIMEType;
 import static java.net.HttpURLConnection.*;
 
@@ -83,7 +84,7 @@ public class TaskDataReceive implements RemoteRepo {
                 public void onTooManyRedirects() {
 
                 }
-            });
+            } );
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -104,7 +105,7 @@ public class TaskDataReceive implements RemoteRepo {
      * @param response
      * @return
      */
-    private static VerifyResult parseHeaders(DownloadInfo info, Response response, boolean queryDb) {
+    protected static VerifyResult parseHeaders(DownloadInfo info, Response response, boolean queryDb) {
         System.out.println("解析headers");
         ResponseBody body = response.body();
         Repo repo = getContext().getRepo();
@@ -138,16 +139,19 @@ public class TaskDataReceive implements RemoteRepo {
             String[] mime = parseMIMEType(tmpUrl, contentDisposition, contentLocation);
             fileName = mime[0];
             mimetype = MediaType.parse(mime[1]);
+            ext = mime[2];
         }
 
         //更新downloadInfo部分信息
         if (mimetype != null && !mimetype.type().equals(info.getMimeType()))
             info.setMimeType(mimetype.type());
 
-        if (info.getFileName().isEmpty()) {
+        if (info.getFileName().isEmpty() && fileName != null) {
             info.setFileName(fileName);
+        } else {
+            info.setFileName(info.getFileName() + EXTENSION_SEPARATOR + ext);
         }
-        info.setPath(info.getFileFolder() + File.pathSeparator + fileName);
+        info.setPath(info.getFileFolder() + File.separator + info.getFileName());
 
         final String transferEncoding = response.header("Transfer-Encoding");
         if (transferEncoding == null) {

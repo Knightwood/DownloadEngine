@@ -148,15 +148,12 @@ public class PieceThreadImpl extends PieceThread {
         if (!verifyResponse(response))//验证未通过，return
             return;
         if (response.body() != null) {
-            System.out.println("开写");
             try (InputStream inputStream = Objects.requireNonNull(response.body()).byteStream()) {
-                System.out.println("尝试获得输入");
                 byte[] b = new byte[BUFFER_SIZE];
                 //从流中读取的数据长度
                 int len;
                 //流没有读尽和没有暂停时执行循环以写入文件
                 while (((len = inputStream.read(b)) != -1) && isRunning) {
-                    System.out.println("每次写入" + len);
                     rf.write(b, 0, len);
                     startPlus(len);//累加进度
                     if (callback != null)

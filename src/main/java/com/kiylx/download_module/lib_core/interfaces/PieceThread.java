@@ -32,6 +32,12 @@ public abstract class PieceThread implements Callable<PieceResult> {
         this.blockId = pieceInfo.getBlockId();
     }
 
+    /**
+     *
+     * @param finalCode {@link pieceCode}
+     * @param msg message
+     * @return {@link PieceResult}
+     */
     public PieceResult generatePieceResult(int finalCode, String msg) {
         return generatePieceResult(finalCode, msg, null);
     }

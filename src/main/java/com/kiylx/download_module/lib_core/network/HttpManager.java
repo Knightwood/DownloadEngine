@@ -85,6 +85,16 @@ public class HttpManager {
         }
         listener.onTooManyRedirects();
     }
+    public Response getResponse(Request request){
+        System.out.println("httpManager的getResponse方法");
+        Response response = null;
+        try {
+            response = mOkHttpClient.newCall(request).execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return response;
+    }
 
     private static final TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
         @Override
@@ -110,7 +120,6 @@ public class HttpManager {
                 .log(VERBOSE)
                .build();.addInterceptor(loggingInterceptor)*/
         mOkHttpClient = new OkHttpClient.Builder()
-
                 .followRedirects(false)
                 .connectTimeout(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS)
                 .readTimeout(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS)

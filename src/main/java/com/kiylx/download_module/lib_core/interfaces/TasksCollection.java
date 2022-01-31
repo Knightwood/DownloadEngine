@@ -2,6 +2,7 @@ package com.kiylx.download_module.lib_core.interfaces;
 
 import com.kiylx.download_module.lib_core.model.TaskResult;
 import com.kiylx.download_module.view.SimpleDownloadInfo;
+import com.kiylx.download_module.view.ViewsAction;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,7 +35,7 @@ public interface TasksCollection {
     int size();
 
     /**
-     * @param viewsAction ViewsAction中定义了数据转换行为
+     * @param viewsAction {@link ViewsAction} 定义了数据转换行为
      * @return 将下载数据转换为视图显示所必需的数据
      */
     List<SimpleDownloadInfo> covert(int viewsAction);

@@ -38,7 +38,7 @@ public class SimpleThreadPool2 {
         }
         return mExecutorService;
     }
-    public void executeTask(DownloadTaskRunnable runnable){
+    public void executeTask(TaskRunnable runnable){
         mExecutorService.execute(runnable);
     }
 

@@ -2,6 +2,7 @@ package com.kiylx.download_module.lib_core.engine;
 
 import com.kiylx.download_module.file_platform.FakeFile;
 import com.kiylx.download_module.fileskit.FileKit;
+import com.kiylx.download_module.lib_core.interfaces.ConnectionListener;
 import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
 import com.kiylx.download_module.lib_core.interfaces.PieceThread;
 import com.kiylx.download_module.lib_core.interfaces.Repo;
@@ -10,7 +11,9 @@ import com.kiylx.download_module.lib_core.network.TaskDataReceive;
 import com.kiylx.download_module.utils.Utils;
 import io.reactivex.annotations.NonNull;
 import kotlin.Pair;
+import okhttp3.Response;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -24,7 +27,7 @@ import static com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROG
 import static com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROGRESS_TIME;
 import static com.kiylx.download_module.lib_core.model.StatusCode.*;
 import static com.kiylx.download_module.lib_core.model.TaskResult.TaskResultCode.*;
-import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static java.net.HttpURLConnection.*;
 
 
 public class DownloadTaskImpl extends DownloadTask {
@@ -137,7 +140,7 @@ public class DownloadTaskImpl extends DownloadTask {
     }
 
     private TaskResult runDownload() {
-        System.out.println("下载任务：runDownload方法被调用");//这里有被调用，正常
+        System.out.println("下载任务：runDownload方法被调用");
         try {
             VerifyResult verifyResult = execPieceDownload();//执行分块下载
             //todo 应该在execPieceDownload()方法里写入结果   DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
@@ -155,7 +158,7 @@ public class DownloadTaskImpl extends DownloadTask {
         return null;
     }
 
-    private VerifyResult execPieceDownload() {//在这停顿。这里必须阻塞，等待下载完成才可以返回，提前返回肯定不对
+    private VerifyResult execPieceDownload() {
         VerifyResult verifyResult = null;
         List<Future<PieceResult>> futureList = Collections.emptyList();//存储分块任务（callable）的返回结果（future）
         setLifecycleState(TaskLifecycle.RUNNING);
@@ -165,7 +168,6 @@ public class DownloadTaskImpl extends DownloadTask {
         System.out.println("调用fetchMetaData之前");
         VerifyResult metaResult;
         metaResult= TaskDataReceive.fetchMetaData(info, shouldQueryDb);
-        // fetchMetaData出了问题，程序执行到这里就结束了，难道有异常没有捕获吗？？
         if (metaResult != null)
             return metaResult;
         if (info.getTotalBytes() == 0) {
@@ -298,6 +300,7 @@ public class DownloadTaskImpl extends DownloadTask {
 
     /**
      * 生成verifyResult同时，把结果写入downloadInfo
+     * @param finalCode {@link StatusCode}
      */
     private VerifyResult generateVerifyResult(int finalCode, String msg, TaskResult.TaskResultCode taskResultCode) {
         info.setFinalCode(finalCode);
@@ -310,6 +313,11 @@ public class DownloadTaskImpl extends DownloadTask {
             repo.syncInfoToDisk(info, action);
     }
 
+    /**
+     *
+     * @param info
+     * @param action {@link Repo.SyncAction}
+     */
     private void syncPieceInfo(PieceInfo info, Repo.SyncAction action) {
         if (repo != null) {
             repo.syncPieceInfoToDisk(info, action);

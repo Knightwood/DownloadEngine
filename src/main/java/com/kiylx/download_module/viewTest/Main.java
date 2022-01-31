@@ -6,7 +6,7 @@ import com.kiylx.download_module.lib_core.model.DownloadInfo;
 
 public class Main {
     public static void main(String... args) throws Exception {
-      test1();
+      //test1();
       //test2();
     }
     public static void test1(){
@@ -21,6 +21,11 @@ public class Main {
     }
     public static void test2(){
         TestThread testThread = new TestThread();
-        testThread.run();
+        testThread.start();
+        try {
+            testThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.kiylx.download_module
 
 import com.kiylx.download_module.lib_core.engine.DownloadTaskImpl
+import com.kiylx.download_module.lib_core.engine.TaskHandler
 import com.kiylx.download_module.lib_core.interfaces.DownloadTask
 import com.kiylx.download_module.lib_core.interfaces.TasksCollection
 import com.kiylx.download_module.lib_core.model.DownloadInfo
@@ -8,17 +9,18 @@ import com.kiylx.download_module.view.SimpleDownloadInfo
 import java.util.*
 
 class Downloads private constructor(configs: Context.ContextConfigs) {
-    var mContext: Context = Context(configs)
+    var mContext: Context
         private set
-    private val mTaskHandler = mContext.taskHandler
+    private var mTaskHandler: TaskHandler
 
     init {
-        mTaskHandler.setLimit(configs.limit)
+        mContext = Context.getContextSingleton(configs)//确保最先初始化Context
+        mTaskHandler = mContext.taskHandler
     }
 
     fun execDownloadTask(url: String, path: String, fileName: String = ""): DownloadInfo {
         val info = DownloadInfo(url, path, fileName)
-        execDownloadTask(info)// 这里会变成耗时逻辑，不会立马返回info
+        execDownloadTask(info)
         return info
     }
 
@@ -67,8 +69,9 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
 
         /**
          * @param configs 传入configs配置Context
+         * 初始化downloads时必须传入config
          */
-        fun downloadsInstance(configs: Context.ContextConfigs = Context.ContextConfigs()): Downloads {
+        fun downloadsInstance(configs: Context.ContextConfigs): Downloads? {
             if (mInstance == null) {
                 synchronized(this) {
                     if (mInstance == null) {
@@ -76,7 +79,7 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
                     }
                 }
             }
-            return mInstance!!
+            return mInstance
         }
     }
 

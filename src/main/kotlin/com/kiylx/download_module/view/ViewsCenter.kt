@@ -17,24 +17,28 @@ class ViewsCenter {
     private var connected: Boolean = false
     private val downloadResultListeners = ConcurrentLinkedQueue<DownloadResultListener>()
     private var tasks: WeakReference<TaskHandler>? = null
-    private var infosList: MutableList<SimpleDownloadInfo>? = null
+    private var infosList_wait: List<SimpleDownloadInfo>? = null
+    private var infosList_active: List<SimpleDownloadInfo>? = null
+    private var infosList_finish: List<SimpleDownloadInfo>? = null
     private var b: AtomicBoolean = AtomicBoolean(false)
 
     init {
         tasks = WeakReference(getContext().taskHandler)
-        infosList = tasks!!.get()?.allSimpleDownloadsInfo;
+        infosList_active = tasks?.get()?.getActiveList();
+        infosList_wait = tasks?.get()?.getWaitingList();
+        infosList_finish = tasks?.get()?.getFinishList();
     }
 
     // SimpleDownloadInfo本身会在下载过程中被更新，所以这里只需要不停的用rxjava周期性的推送即可
-    private val observable: Observable<MutableList<SimpleDownloadInfo>?> =
-        Observable.just(infosList).repeatWhen {
+    private val observable: Observable<List<SimpleDownloadInfo>?> =
+        Observable.just(infosList_active).repeatWhen {
             Observable.timer(2, TimeUnit.SECONDS)
         }
 
     private fun doSomeThing() {
-        observable.subscribe(object : Observer<MutableList<SimpleDownloadInfo>?> {
+        observable.subscribe(object : Observer<List<SimpleDownloadInfo>?> {
             override fun onSubscribe(d: Disposable) {}
-            override fun onNext(t: MutableList<SimpleDownloadInfo>) {
+            override fun onNext(t: List<SimpleDownloadInfo>) {
                 downloadResultListeners.forEach {
                     it.updated(t)
                 }

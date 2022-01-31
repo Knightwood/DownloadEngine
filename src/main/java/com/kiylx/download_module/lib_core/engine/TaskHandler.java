@@ -1,37 +1,28 @@
 package com.kiylx.download_module.lib_core.engine;
 
+import com.kiylx.download_module.ContextKt;
 import com.kiylx.download_module.DownloadsListKind;
-import com.kiylx.download_module.lib_core.interfaces.*;
-import com.kiylx.download_module.utils.DigestUtils;
-import com.kiylx.download_module.utils.java_log_pack.Log;
 import com.kiylx.download_module.lib_core.data_struct.DownloadMap;
+import com.kiylx.download_module.lib_core.data_struct.Empty;
 import com.kiylx.download_module.lib_core.data_struct.WaitingDownloadQueue;
+import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
+import com.kiylx.download_module.lib_core.interfaces.TasksCollection;
 import com.kiylx.download_module.lib_core.model.DownloadInfo;
 import com.kiylx.download_module.lib_core.model.StatusCode;
-import com.kiylx.download_module.lib_core.model.TaskResult;
 import com.kiylx.download_module.lib_core.model.TaskLifecycle;
+import com.kiylx.download_module.lib_core.model.TaskResult;
+import com.kiylx.download_module.utils.DigestUtils;
+import com.kiylx.download_module.utils.java_log_pack.Log;
+import io.reactivex.disposables.CompositeDisposable;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.function.*;
-
-import com.kiylx.download_module.view.SimpleDownloadInfo;
-import com.kiylx.download_module.view.ViewsAction;
-import io.reactivex.Observable;
-import io.reactivex.Observer;
-import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Consumer;
-import io.reactivex.schedulers.Schedulers;
+import java.util.concurrent.*;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 import static com.kiylx.download_module.DownloadsListKind.*;
 
@@ -46,20 +37,25 @@ public class TaskHandler {
         SINGLETON;
         private TaskHandler instance = null;
 
-        public TaskHandler getInstance() {
+        public TaskHandler getInstance(int limit) {
             if (instance == null)
-                instance = new TaskHandler();
+                instance = new TaskHandler(limit);
             return instance;
         }
     }
 
-    public static TaskHandler getInstance() {
-        return SingletonEnum.SINGLETON.getInstance();
+    public static TaskHandler getInstance(int limit) {
+        return SingletonEnum.SINGLETON.getInstance(limit);
     }
 
-    private TaskHandler() {
+    private TaskHandler(int limit) {
+        this.downloadLimit = limit;
     }
 
+    /**
+     * @param kind {@link DownloadsListKind} 类型
+     * @return 根据kind得到列表
+     */
     public TasksCollection getDownloadTaskList(int kind) {
         switch (kind) {
             case DownloadsListKind.wait_kind:
@@ -69,16 +65,7 @@ public class TaskHandler {
             case DownloadsListKind.finish_kind:
                 return finish;
         }
-        return null;
-    }
-
-    public List<SimpleDownloadInfo> getAllSimpleDownloadsInfo() {
-        List<SimpleDownloadInfo> list = new ArrayList<>();
-        list.addAll(wait.covert(ViewsAction.generate));
-        list.addAll(wait.frozenTask.covert(ViewsAction.generate));
-        list.addAll(active.covert(ViewsAction.generate));
-        list.addAll(finish.covert(ViewsAction.generate));
-        return list;
+        return new Empty();
     }
 
     /**
@@ -121,7 +108,7 @@ public class TaskHandler {
 
     /**
      * @param id       uuid
-     * @param taskKind DownloadsListKind中定义,DownloadTask所属的队列
+     * @param taskKind {@link DownloadsListKind}中定义,DownloadTask所属的队列
      */
     public void requestPauseTask(UUID id, int taskKind) {
         DownloadTask task;
@@ -188,50 +175,39 @@ public class TaskHandler {
         }
     }
 
+    // ExecutorService executorService=new ThreadPoolExecutor(downloadLimit,2*downloadLimit,1000L,TimeUnit.SECONDS, new ArrayBlockingQueue<>(2 * downloadLimit));
+    ExecutorService executorService = Executors.newFixedThreadPool(downloadLimit * 2);
+
     /**
      * 运行下载任务
      *
      * @param task downloadTask
      */
-    private void runTask(DownloadTask task) {//如果这里开启线程去执行下载，那么前面就能拿到info.而不用等待下载过程带来的阻塞
-       /* FutureTask<TaskResult> taskFuture = new FutureTask<TaskResult>(task);
-        new Thread(taskFuture).start();
-        try {
-            TaskHandler.this.finallyTaskFinish(task, taskFuture.get());
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-        try {
-            task.call();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
+    private void runTask(DownloadTask task) {
+        CompletableFuture.supplyAsync(new Supplier<TaskResult>() {
+            @Override
+            public TaskResult get() {
+                try {
+                    return task.call();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        }, executorService).whenComplete(new BiConsumer<TaskResult, Throwable>() {
+            @Override
+            public void accept(TaskResult taskResult, Throwable throwable) {
+                System.out.println("下载任务执行结束");
+                TaskHandler.this.finallyTaskFinish(task, taskResult);
+            }
+        }).exceptionally(throwable -> {
+            Log.e("Getting info " + task.getInfo().getUUIDString() + " error: " +
+                    throwable.getMessage());
+            return null;
+        });
 
-        /*CompletableFuture<TaskResult> future = CompletableFuture.supplyAsync((Supplier<TaskResult>) () -> {
-                    try {
-                        return (TaskResult) task.call();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    return null;
-                }).whenComplete(new BiConsumer<TaskResult, Throwable>() {
-                    @Override
-                    public void accept(TaskResult taskResult, Throwable throwable) {
-                        System.out.println("下载任务执行结束: " + (taskResult == null));
-                        TaskHandler.this.finallyTaskFinish(task, taskResult);
-                    }
-                })
-                .exceptionally(new Function<Throwable, TaskResult>() {
-                    @Override
-                    public TaskResult apply(Throwable throwable) {
-                        Log.e("Getting info " + task.getInfo().getUUIDString() + " error: " +
-                                throwable.getMessage());
-                        return null;
-                    }
-                });*/
-        disposables.add(Observable.fromCallable(task)
-                .subscribeOn(Schedulers.io())
-                .observeOn(Schedulers.computation())
+        /*disposables.add(Observable.fromCallable(task)
+                .subscribeOn(Schedulers.newThread())
                 .subscribe(new Consumer<TaskResult>() {
                                @Override
                                public void accept(TaskResult taskResult) throws Exception {
@@ -240,7 +216,7 @@ public class TaskHandler {
                                }
                            }
                 )
-        );
+        );*/
     }
 
     private boolean checkNoDownloads() {
@@ -253,10 +229,6 @@ public class TaskHandler {
 
     public void close() {
         disposables.clear();
-    }
-
-    public void setLimit(int downloadLimit) {
-        this.downloadLimit = downloadLimit;
     }
 
     /**
@@ -280,8 +252,8 @@ public class TaskHandler {
 
     /**
      * @param task        downloadTask
-     * @param oldTaskKind task原来的位置
-     * @param nowTaskKind 将此task移动到这里
+     * @param oldTaskKind {@link DownloadsListKind}  task原来的位置
+     * @param nowTaskKind {@link DownloadsListKind} 将此task移动到这里
      */
     private void moveTask(DownloadTask task, int oldTaskKind, int nowTaskKind) {
         removeTask(oldTaskKind, task);
@@ -301,6 +273,10 @@ public class TaskHandler {
         }
     }
 
+    /**
+     * @param taskKind {@link DownloadsListKind}
+     * @param task
+     */
     private void removeTask(int taskKind, DownloadTask task) {
         switch (taskKind) {
             case wait_kind:
@@ -426,10 +402,6 @@ public class TaskHandler {
         try (FileInputStream is = new FileInputStream(file)) {
             return (sha256Hash ? DigestUtils.makeSha256Hash(is) : DigestUtils.makeMd5Hash(is));
         }
-
-    }
-
-    public void views() {
 
     }
 }
