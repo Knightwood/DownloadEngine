@@ -1,11 +1,6 @@
-plugins {
-    id 'java'
-    id 'org.jetbrains.kotlin.jvm' version '1.5.31'
-}
-
-groupId = 'com.github.knightwood'
-artifactId = 'DownloadEngineLib'
-version = '1.0.0'
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+apply plugin: 'org.jetbrains.kotlin.jvm'
 
 repositories {
     mavenCentral()
@@ -32,4 +27,23 @@ dependencies {
 
 test {
     useJUnitPlatform()
+}
+
+java {
+	withSourcesJar()
+	withJavadocJar()
+}
+def versionName = '1.0.0'
+publishing {
+    publications {
+        // 定义一个名为 Production 的发布
+        Production(MavenPublication) {
+            // 使用方法 例如： implementation 'cn.com.jack:liveeventbus:dev-1.0'
+            groupId = "com.github.knightwood"
+            artifactId = "downloadengine"
+            version = versionName
+            from components.java
+        }
+    }
+
 }
