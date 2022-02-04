@@ -33,19 +33,21 @@ test {
 
 java {
 	withSourcesJar()
-	withJavadocJar()
+	//withJavadocJar()
 }
-def versionName = '1.0.0'
+
+group = 'com.github.knightwood'
+version = '1.0.0'
+
 publishing {
     publications {
-        // 定义一个名为 Production 的发布
-        Production(MavenPublication) {
-            // 使用方法 例如： implementation 'cn.com.jack:liveeventbus:dev-1.0'
-            groupId = "com.github.knightwood"
-            artifactId = "downloadengine"
-            version = versionName
+        maven(MavenPublication) {
             from components.java
         }
     }
 
+}
+wrapper {
+    gradleVersion = "7.2"
+    distributionType = Wrapper.DistributionType.ALL
 }

@@ -1,22 +1,15 @@
 package com.kiylx.download_module.lib_core.network;
 
-import com.ihsanbal.logging.I;
 import com.kiylx.download_module.lib_core.model.DownloadInfo;
 import com.kiylx.download_module.utils.TextUtils;
 import com.kiylx.download_module.viewTest.InitTest;
 import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import static com.kiylx.download_module.ContextKt.getContext;
 import static com.kiylx.download_module.lib_core.network.TaskDataReceive.parseHeaders;
-import static com.kiylx.download_module.utils.Utils.parseMIMEType;
 import static java.net.HttpURLConnection.HTTP_OK;
-import static org.junit.jupiter.api.Assertions.*;
 
 class TaskDataReceiveTest {
     Response response;
@@ -44,16 +37,19 @@ class TaskDataReceiveTest {
         setUp();
         String contentDisposition = response.header("Content-Disposition");
         String contentLocation = response.header("Content-Location");
+        System.out.println(contentDisposition);
+        System.out.println(contentLocation);
+
         String tmpUrl = response.request().url().toString();
         String fileName = null;
         String ext = null;
         MediaType mimetype = null;
-        String[] mime = parseMIMEType(tmpUrl, contentDisposition, contentLocation);
-        fileName = mime[0];
+        //String[] mime = parseMIMEType(tmpUrl, contentDisposition, contentLocation);
+        //fileName = mime[0];
         //mimetype = MediaType.parse(mime[1]);//todo 这里传入的参数怎么会是null？？
-        ext = mime[2];
-        System.out.println(fileName);
+        //ext = mime[2];
+        //System.out.println(fileName);
         //System.out.println(mimetype);
-        System.out.println(ext);
+        //System.out.println(ext);
     }
 }

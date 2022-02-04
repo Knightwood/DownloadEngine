@@ -32,6 +32,8 @@ public class TaskHandler {
     private final WaitingDownloadQueue wait = new WaitingDownloadQueue();
     private final DownloadMap finish = new DownloadMap();
     private final CompositeDisposable disposables = new CompositeDisposable();
+    // ExecutorService executorService=new ThreadPoolExecutor(downloadLimit,2*downloadLimit,1000L,TimeUnit.SECONDS, new ArrayBlockingQueue<>(2 * downloadLimit));
+    private ExecutorService executorService;
 
     enum SingletonEnum {
         SINGLETON;
@@ -50,6 +52,7 @@ public class TaskHandler {
 
     private TaskHandler(int limit) {
         this.downloadLimit = limit;
+        executorService = Executors.newFixedThreadPool(limit * 2);
     }
 
     /**
@@ -174,9 +177,6 @@ public class TaskHandler {
             addDownloadTask(task);
         }
     }
-
-    // ExecutorService executorService=new ThreadPoolExecutor(downloadLimit,2*downloadLimit,1000L,TimeUnit.SECONDS, new ArrayBlockingQueue<>(2 * downloadLimit));
-    ExecutorService executorService = Executors.newFixedThreadPool(downloadLimit * 2);
 
     /**
      * 运行下载任务

@@ -94,7 +94,12 @@ public class Utils {
 
         /* If we still have nothing at this point, try the content location */
         if (filename == null && contentLocation != null) {
-            String decodedContentLocation = URLDecoder.decode(contentLocation,Charset.defaultCharset());
+            String decodedContentLocation = null;
+            try {
+                decodedContentLocation = URLDecoder.decode(contentLocation,"UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
             if (decodedContentLocation != null) {
                 int queryIndex = decodedContentLocation.indexOf('?');
                 /* If there is a query string strip it, same as desktop browsers */
