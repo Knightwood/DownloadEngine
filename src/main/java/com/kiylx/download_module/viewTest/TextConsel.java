@@ -7,8 +7,9 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class TextConsel implements DownloadResultListener {
+
     @Override
-    public void updated(List<SimpleDownloadInfo> list) {
+    public void updatedActive(List<SimpleDownloadInfo> list) {
         list.forEach(
                 new Consumer<SimpleDownloadInfo>() {
                     @Override
@@ -20,5 +21,15 @@ public class TextConsel implements DownloadResultListener {
                     }
                 }
         );
+    }
+
+    @Override
+    public void updatedWait(List<SimpleDownloadInfo> list) {
+
+    }
+
+    @Override
+    public void updatedFinish(List<SimpleDownloadInfo> list) {
+
     }
 }

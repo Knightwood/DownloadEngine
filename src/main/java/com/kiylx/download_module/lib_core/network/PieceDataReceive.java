@@ -35,6 +35,8 @@ public class PieceDataReceive implements RemoteRepo {
          * streaming large downloads after cancelled.
          */
         builder.addHeader("Connection", "close");
+        if (!info.getReferer().isEmpty())
+            builder.addHeader("Referer", info.getReferer());
         HeaderStore[] eTag = getContext().getRepo().getHeadersByName(info.getUuid(), "ETag");
         if (eTag != null && eTag.length > 0)
             builder.addHeader("If-Match", eTag[0].value);

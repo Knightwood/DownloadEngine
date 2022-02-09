@@ -42,6 +42,9 @@ public class TaskDataReceive implements RemoteRepo {
         if (!TextUtils.isEmpty(info.getUserAgent())) {
             builder.addHeader("User-Agent", info.getUserAgent());
         }
+        if (!info.getReferer().isEmpty())
+        builder.addHeader("Referer",info.getReferer());
+
         System.out.println("调用getResponse方法");
         try {//尝试请求，获得结果并解析
             getContext().getHttpManager().getResponse(builder.build(), new ConnectionListener() {
@@ -84,7 +87,7 @@ public class TaskDataReceive implements RemoteRepo {
                 public void onTooManyRedirects() {
 
                 }
-            } );
+            });
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -96,6 +99,26 @@ public class TaskDataReceive implements RemoteRepo {
             }
         }
         return result[0];
+    }
+
+    /**
+     * 测试连接如何
+     *
+     * @param info downloadinfo
+     */
+    @Nullable
+    public static void testConnect(DownloadInfo info, ConnectionListener listener) {
+        Request.Builder builder = new Request.Builder()
+                .url(info.getUrl());//构建request
+        if (!TextUtils.isEmpty(info.getUserAgent())) {
+            builder.addHeader("User-Agent", info.getUserAgent());
+        }
+        System.out.println("调用getResponse方法");
+        try {//尝试请求，获得结果并解析
+            getContext().getHttpManager().getResponse(builder.build(), listener);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**

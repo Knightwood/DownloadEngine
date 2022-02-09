@@ -27,6 +27,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
                 field = 0
         }
     var userAgent: String? = null
+    var referer: String=""
     var lifeCycle: TaskLifecycle = TaskLifecycle.OH
         set(value) {
             field = value
@@ -94,7 +95,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
     var pieceResultArray: Array<PieceResult>? = null//分块的结果，目前还没有使用
 
     var checkSum: String? = null // MD5, SHA-256。 添加下载生成downloadinfo时添加，也可不添加 。若添加此值，在下载完成时，会校验此值
-
+    var description: String? = null//下载描述信息
     fun reduceRetryCount() {
         if (retryCount > 0)
             retryCount--

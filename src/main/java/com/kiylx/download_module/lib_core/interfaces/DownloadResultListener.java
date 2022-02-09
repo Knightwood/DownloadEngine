@@ -6,5 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface DownloadResultListener {
-    void updated(List<SimpleDownloadInfo> list);
+    void updatedActive(List<SimpleDownloadInfo> list);
+    void updatedWait(List<SimpleDownloadInfo> list);
+    void updatedFinish(List<SimpleDownloadInfo> list);
 }
