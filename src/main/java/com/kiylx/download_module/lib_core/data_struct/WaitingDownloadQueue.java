@@ -125,7 +125,9 @@ public class WaitingDownloadQueue implements TasksCollection {
         switch (viewsAction) {
             case ViewsAction.generate:
                 views = new ArrayList<>();
+                waiting.forEach(downloadTask -> views.add(downloadTask.getInfo().getSimpleDownloadInfo()));
             case ViewsAction.update:
+                views.clear();
                 waiting.forEach(downloadTask -> views.add(downloadTask.getInfo().getSimpleDownloadInfo()));
                 return views;
             case ViewsAction.pull:
@@ -239,7 +241,9 @@ public class WaitingDownloadQueue implements TasksCollection {
             switch (viewsAction) {
                 case ViewsAction.generate:
                     views = new ArrayList<>();
+                    frozen.forEach(downloadTask -> views.add(genSimpleDownloadInfo(downloadTask.getInfo())));
                 case ViewsAction.update:
+                    views.clear();
                     frozen.forEach(downloadTask -> views.add(genSimpleDownloadInfo(downloadTask.getInfo())));
                     return views;
                 case ViewsAction.pull:

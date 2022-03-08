@@ -2,9 +2,14 @@ package com.kiylx.download_module.lib_core.interfaces;
 
 import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
 import com.kiylx.download_module.view.SimpleDownloadInfo;
+import com.kiylx.download_module.view.ViewsAction;
+import io.reactivex.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import static com.kiylx.download_module.view.SimpleDownloadInfoKt.genSimpleDownloadInfo;
 
 public interface FrozenCollection {
 

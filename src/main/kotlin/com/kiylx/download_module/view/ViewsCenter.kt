@@ -1,16 +1,11 @@
 package com.kiylx.download_module.view
 
-import com.kiylx.download_module.Context
 import com.kiylx.download_module.getContext
 import com.kiylx.download_module.lib_core.engine.TaskHandler
 import com.kiylx.download_module.lib_core.interfaces.DownloadResultListener
 import io.reactivex.Observable
-import io.reactivex.Observer
 import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.disposables.Disposable
 import io.reactivex.functions.Consumer
-import io.reactivex.internal.disposables.DisposableContainer
-import io.reactivex.observers.DisposableCompletableObserver
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
@@ -20,30 +15,31 @@ class ViewsCenter {
 
     private val downloadResultListeners = ConcurrentLinkedQueue<DownloadResultListener>()
     private var tasks: WeakReference<TaskHandler>? = null
-    private var infosList_wait: List<SimpleDownloadInfo>? = null
-    private var infosList_active: List<SimpleDownloadInfo>? = null
-    private var infosList_finish: List<SimpleDownloadInfo>? = null
+    private var infosList_wait: MutableList<SimpleDownloadInfo>? = null
+    private var infosList_active: MutableList<SimpleDownloadInfo>? = null
+    private var infosList_finish: MutableList<SimpleDownloadInfo>? = null
     private var b: AtomicBoolean = AtomicBoolean(false)
 
     init {
         tasks = WeakReference(getContext().taskHandler)
+        tasks!!.get()?.addViewCenter(this)
         infosList_active = tasks?.get()?.getActiveList();
         infosList_wait = tasks?.get()?.getWaitingList();
         infosList_finish = tasks?.get()?.getFinishList();
     }
 
     // SimpleDownloadInfo本身会在下载过程中被更新，所以这里只需要不停的用rxjava周期性的推送即可
-    private val activeObservable: Observable<List<SimpleDownloadInfo>?> =
+    private val activeObservable: Observable<MutableList<SimpleDownloadInfo>?> =
         Observable.just(infosList_active).repeatWhen {
-            Observable.timer(2, TimeUnit.SECONDS)
+            Observable.timer(1, TimeUnit.SECONDS)
         }
-    private val waitObservable: Observable<List<SimpleDownloadInfo>?> =
+    private val waitObservable: Observable<MutableList<SimpleDownloadInfo>?> =
         Observable.just(infosList_wait).repeatWhen {
-            Observable.timer(2, TimeUnit.SECONDS)
+            Observable.timer(1, TimeUnit.SECONDS)
         }
-    private val finishObservable: Observable<List<SimpleDownloadInfo>?> =
+    private val finishObservable: Observable<MutableList<SimpleDownloadInfo>?> =
         Observable.just(infosList_finish).repeatWhen {
-            Observable.timer(2, TimeUnit.SECONDS)
+            Observable.timer(3, TimeUnit.SECONDS)
         }
     var disposableContainer = CompositeDisposable()
 
@@ -64,6 +60,22 @@ class ViewsCenter {
             }
         })
         disposableContainer.addAll(activeDisposable, waitDisposable, finishDisposable)
+    }
+
+    //因为有些下载被删除或是下载完成，他们会被移动到另一个列表，所以要重新获取列表更新进度
+    fun updateList() {
+        infosList_active?.apply {
+            clear()
+            tasks?.get()?.getActiveList(ViewsAction.update)?.let { addAll(it) }
+        }
+        infosList_wait?.apply {
+            clear()
+            tasks?.get()?.getWaitingList(ViewsAction.update)?.let { addAll(it) }
+        }
+        infosList_finish?.apply {
+            clear()
+            tasks?.get()?.getFinishList(ViewsAction.update)?.let { addAll(it) }
+        }
     }
 
     fun listen() {

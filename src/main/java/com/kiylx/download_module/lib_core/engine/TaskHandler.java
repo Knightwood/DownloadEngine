@@ -13,12 +13,18 @@ import com.kiylx.download_module.lib_core.model.TaskLifecycle;
 import com.kiylx.download_module.lib_core.model.TaskResult;
 import com.kiylx.download_module.utils.DigestUtils;
 import com.kiylx.download_module.utils.java_log_pack.Log;
+import com.kiylx.download_module.view.ViewsAction;
+import com.kiylx.download_module.view.ViewsCenter;
 import io.reactivex.disposables.CompositeDisposable;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
@@ -34,6 +40,12 @@ public class TaskHandler {
     private final CompositeDisposable disposables = new CompositeDisposable();
     // ExecutorService executorService=new ThreadPoolExecutor(downloadLimit,2*downloadLimit,1000L,TimeUnit.SECONDS, new ArrayBlockingQueue<>(2 * downloadLimit));
     private ExecutorService executorService;
+    private ViewsCenter viewsCenters;
+
+    //下载文件后，通知视图中心重新拉取视图数据
+    public void addViewCenter(@NotNull ViewsCenter viewsCenter) {
+        this.viewsCenters = viewsCenter;
+    }
 
     enum SingletonEnum {
         SINGLETON;
@@ -316,6 +328,8 @@ public class TaskHandler {
         }
         handleInfoStatus(task);
         scheduleDownload(null);
+        if (viewsCenters!=null)
+            viewsCenters.updateList();//更新视图列表
     }
 
 
