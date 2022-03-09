@@ -46,7 +46,7 @@ public class FileKitImpl implements FileKit<Path> {
     }
 
     @Override
-    public int is(String path) {
+    public int thisPathIsWhat(String path) {
         Path path1 = Paths.get(path);
         if (Files.isRegularFile(path1))
             return FileKind.file;
@@ -117,7 +117,7 @@ public class FileKitImpl implements FileKit<Path> {
     }
 
     @Override
-    public FakeFile<Path> get(String filePath) {
+    public FakeFile<Path> getThisPathFile(String filePath) {
         return new PathFile(Paths.get(filePath), FakeFile.linux);
     }
 

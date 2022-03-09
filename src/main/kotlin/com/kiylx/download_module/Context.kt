@@ -37,12 +37,19 @@ class Context private constructor(configs: ContextConfigs) {
 
     val SysCallKit: SysCall by CDelegate(setting.sysCallClazz, ::SysCallImpl)
 
-    val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz,
-        ::FileKitImpl)
+    val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz, ::FileKitImpl)
 
     val taskHandler: TaskHandler by lazy { TaskHandler.getInstance(limit) }
     val verifyFactory: VerifyFactory by lazy { VerifyFactoryImpl() }
     val httpManager: HttpManager by lazy { HttpManager.getInstance() }
+
+    /**
+     * 外界将接口实现通过此方法注册到TaskHandler中。
+     * 以此实现在下载完成后，外界自动处理下载文件，比如重命名文件并移动到某一个特定目录
+     */
+    fun registerDownloadFinishHandle(downloadFinishHandler: TaskHandler.HandleTaskInterface){
+            taskHandler.registerHandle(downloadFinishHandler)
+    }
 
     companion object {
         const val updateViewInterval: Long = 2000L
@@ -51,12 +58,12 @@ class Context private constructor(configs: ContextConfigs) {
         const val defaultDownloadLimit = 3 //默认下载任务数量限制
         const val defaultDownloadThreadNum = 8 //默认下载线程数
 
-        var singleton:Context?=null
-        fun getContextSingleton(configs: ContextConfigs):Context{
-            if (singleton==null){
-                synchronized(Context::class.java){
-                    if (singleton==null){
-                        singleton= Context(configs)
+        var singleton: Context? = null
+        fun getContextSingleton(configs: ContextConfigs): Context {
+            if (singleton == null) {
+                synchronized(Context::class.java) {
+                    if (singleton == null) {
+                        singleton = Context(configs)
                     }
                 }
             }
