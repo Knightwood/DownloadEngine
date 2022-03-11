@@ -157,8 +157,8 @@ public class PieceThreadImpl extends PieceThread {
                     rf.write(b, 0, len);
                     startPlus(len);//累加进度
                     if (callback != null)
-                        callback.update(pieceInfo, isRunning);
-                    //updateProgress(len);
+                        //callback.update(pieceInfo, isRunning);
+                        updateProgress(len);
                 }
                 //流没有读尽且暂停时的处理
                 if ((!isRunning) && len != -1) {
@@ -190,23 +190,21 @@ public class PieceThreadImpl extends PieceThread {
     private long currentTime = 0L;
     private long currentSize = 0L;
 
-    //未使用
+    //以时间间隔更新分块及及info信息
     private void updateProgress(long len) {
-        startPlus(len);//累加
         long deltaTime = System.currentTimeMillis() - currentTime;
         long deltaSize = getCurBytes() - currentSize;
 
-        if (deltaTime > MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
+        if (deltaTime >= MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
             currentTime = System.currentTimeMillis();
             currentSize = getCurBytes();
 
-            long speed = deltaSize / deltaTime * 1000; // bytes/s
+            long speed = deltaSize / deltaTime * 1000; // bytes/s 分块的速度
             pieceInfo.setSpeed(speed);
         }
         if (callback != null)
             callback.update(pieceInfo, isRunning);
     }
-
     /**
      * 线程之行结束的清理
      */
@@ -264,7 +262,6 @@ public class PieceThreadImpl extends PieceThread {
                 pieceInfos.add(thread.pieceInfo);
             }
         }
-        info.setPieceInfos(pieceInfos);
         return result;
 
     }

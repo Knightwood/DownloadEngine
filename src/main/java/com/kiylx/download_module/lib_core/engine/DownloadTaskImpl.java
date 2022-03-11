@@ -2,18 +2,16 @@ package com.kiylx.download_module.lib_core.engine;
 
 import com.kiylx.download_module.file_platform.FakeFile;
 import com.kiylx.download_module.fileskit.FileKit;
-import com.kiylx.download_module.lib_core.interfaces.ConnectionListener;
 import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
 import com.kiylx.download_module.lib_core.interfaces.PieceThread;
 import com.kiylx.download_module.lib_core.interfaces.Repo;
 import com.kiylx.download_module.lib_core.model.*;
 import com.kiylx.download_module.lib_core.network.TaskDataReceive;
 import com.kiylx.download_module.utils.Utils;
+
 import io.reactivex.annotations.NonNull;
 import kotlin.Pair;
-import okhttp3.Response;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static com.kiylx.download_module.ContextKt.getContext;
+import static com.kiylx.download_module.lib_core.interfaces.PieceThread.INFO_MIN_PROGRESS_TIME;
 import static com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROGRESS_STEP;
 import static com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROGRESS_TIME;
 import static com.kiylx.download_module.lib_core.model.StatusCode.*;
@@ -46,13 +45,8 @@ public class DownloadTaskImpl extends DownloadTask {
             info.getSplitEnd()[blockId] = pieceInfo.getEnd();
             info.setRunning(isRunning);
             info.getCurrentBytes()[blockId] = pieceInfo.getCurBytes();//更新每个分块已下载的大小
-
             //更新进度
-            if (repo == null)
-                throw new NullPointerException("repo is null");
-            syncInfo(Repo.SyncAction.UPDATE);
-            syncPieceInfo(pieceInfo, Repo.SyncAction.UPDATE);
-            calcProgress();
+            updateToDb(pieceInfo);
         }
 
         @Override
@@ -67,6 +61,13 @@ public class DownloadTaskImpl extends DownloadTask {
             return info;
         }
     };
+
+    private void updateToDb(PieceInfo pieceInfo) {
+        if (repo == null)
+            throw new NullPointerException("repo is null");
+        syncPieceInfo(pieceInfo, Repo.SyncAction.UPDATE);
+        calcProgress();
+    }
 
 
     public DownloadTaskImpl(@NonNull DownloadInfo info) {
@@ -83,7 +84,11 @@ public class DownloadTaskImpl extends DownloadTask {
     private long lastSize = 0L;//上次计算速度时的文件大小
     private long lastTime = 0L;//上次计算速度时的时间
 
-    //计算速度
+    /**
+     * 计算速度
+     * 与上次时间间隔前相比，这个时间间隔下载了多少
+     * 并更新到数据库
+     */
     public void calcProgress() {
         long currentSize = 0L;
         long deltaTime = System.currentTimeMillis() - lastTime;
@@ -91,11 +96,12 @@ public class DownloadTaskImpl extends DownloadTask {
             currentSize += j;
         }
         long deltaSize = currentSize - lastSize;
-        if (deltaTime > MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
+        if (deltaTime >= INFO_MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
             long speed = deltaSize / deltaTime * 1000; // bytes/s
             lastTime = System.currentTimeMillis();
             lastSize = currentSize;
-            info.getSimpleDownloadInfo().setSpeed(speed);
+            info.setSpeed(speed);
+            syncInfo(Repo.SyncAction.UPDATE);
         }
     }
 
@@ -167,7 +173,7 @@ public class DownloadTaskImpl extends DownloadTask {
         //验证连接有效性
         System.out.println("调用fetchMetaData之前");
         VerifyResult metaResult;
-        metaResult= TaskDataReceive.fetchMetaData(info, shouldQueryDb);
+        metaResult = TaskDataReceive.fetchMetaData(info, shouldQueryDb);
         if (metaResult != null)
             return metaResult;
         if (info.getTotalBytes() == 0) {
@@ -199,10 +205,9 @@ public class DownloadTaskImpl extends DownloadTask {
             verifyResult = parseResult(futureList);
             return verifyResult;
         } finally {
-            if (verifyResult != null)
-                DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
+            verifyResult = parseResult(futureList);
+            DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
         }
-        verifyResult = parseResult(futureList);
         return verifyResult;
     }
 
@@ -243,14 +248,24 @@ public class DownloadTaskImpl extends DownloadTask {
 
     @Override
     public void requestCancel() {
+        if (getLifecycle().getNowState() != TaskLifecycle.RUNNING)
+            syncInfo(Repo.SyncAction.UPDATE);
         setLifecycleState(TaskLifecycle.DROP);
         setFlag(false);
     }
 
     @Override
     public void requestStop() {
+        if (getLifecycle().getNowState() != TaskLifecycle.RUNNING)
+            syncInfo(Repo.SyncAction.UPDATE);
         setLifecycleState(TaskLifecycle.STOP);
         setFlag(false);
+    }
+
+    @Override
+    public void requestResume() {
+        setLifecycleState(TaskLifecycle.RESTART);
+        setFlag(true);
     }
 
     private void setFlag(boolean canRunning) {
@@ -263,11 +278,6 @@ public class DownloadTaskImpl extends DownloadTask {
         }
     }
 
-    @Override
-    public void requestResume() {
-        setLifecycleState(TaskLifecycle.RESTART);
-        setFlag(true);
-    }
 
     @Override
     public DownloadInfo getInfo() {
@@ -300,6 +310,7 @@ public class DownloadTaskImpl extends DownloadTask {
 
     /**
      * 生成verifyResult同时，把结果写入downloadInfo
+     *
      * @param finalCode {@link StatusCode}
      */
     private VerifyResult generateVerifyResult(int finalCode, String msg, TaskResult.TaskResultCode taskResultCode) {
@@ -308,13 +319,13 @@ public class DownloadTaskImpl extends DownloadTask {
         return new VerifyResult(finalCode, msg, taskResultCode);
     }
 
+    //更新info信息
     public void syncInfo(Repo.SyncAction action) {
         if (repo != null)
             repo.syncInfoToDisk(info, action);
     }
 
     /**
-     *
      * @param info
      * @param action {@link Repo.SyncAction}
      */

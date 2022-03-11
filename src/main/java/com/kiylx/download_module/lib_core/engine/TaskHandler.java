@@ -5,6 +5,7 @@ import com.kiylx.download_module.lib_core.data_struct.DownloadMap;
 import com.kiylx.download_module.lib_core.data_struct.Empty;
 import com.kiylx.download_module.lib_core.data_struct.WaitingDownloadQueue;
 import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
+import com.kiylx.download_module.lib_core.interfaces.Repo;
 import com.kiylx.download_module.lib_core.interfaces.TasksCollection;
 import com.kiylx.download_module.lib_core.model.DownloadInfo;
 import com.kiylx.download_module.lib_core.model.StatusCode;
@@ -13,7 +14,9 @@ import com.kiylx.download_module.lib_core.model.TaskResult;
 import com.kiylx.download_module.utils.DigestUtils;
 import com.kiylx.download_module.utils.java_log_pack.Log;
 import com.kiylx.download_module.view.ViewsCenter;
+
 import io.reactivex.disposables.CompositeDisposable;
+
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -35,12 +38,6 @@ public class TaskHandler {
     private final CompositeDisposable disposables = new CompositeDisposable();
     // ExecutorService executorService=new ThreadPoolExecutor(downloadLimit,2*downloadLimit,1000L,TimeUnit.SECONDS, new ArrayBlockingQueue<>(2 * downloadLimit));
     private ExecutorService executorService;
-    private ViewsCenter viewsCenters;
-
-    //下载文件，通知视图中心拉取视图数据
-    public void addViewCenter(@NotNull ViewsCenter viewsCenter) {
-        this.viewsCenters = viewsCenter;
-    }
 
     //外界把接口实现注册到这里，以此实现在下载完成后，另外界自动处理后续操作，比如重命名文件并移动到某一个特定目录
     private HandleTaskInterface handleTaskInterface;
@@ -103,17 +100,19 @@ public class TaskHandler {
      * 任务需要继续等待，放入wait并返回false ；
      */
     public boolean addDownloadTask(DownloadTask task) {
+        boolean b = false;
         if (isMaxActiveDownloads()) {
             System.out.println("队列满了，等待下载");
             wait.add(task);
             task.setLifecycleState(TaskLifecycle.START);
-            return false;
         } else {
             System.out.println("队列没满，执行下载");
             active.add(task);
             runTask(task);
-            return true;
+            b = true;
         }
+        task.syncInfo(Repo.SyncAction.UPDATE);
+        return b;
     }
 
     /**
@@ -225,7 +224,7 @@ public class TaskHandler {
                 TaskHandler.this.finallyTaskFinish(task, taskResult);
             }
         }).exceptionally(throwable -> {
-            Log.e("Getting info " + task.getInfo().getUUIDString() + " error: " +
+            Log.e("Getting info " + task.getInfo().getUuid().toString() + " error: " +
                     throwable.getMessage());
             return null;
         });
@@ -340,8 +339,6 @@ public class TaskHandler {
         }
         handleInfoStatus(task);
         scheduleDownload(null);
-        if (viewsCenters != null)
-            viewsCenters.updateList();//更新视图列表
     }
 
 
@@ -371,6 +368,7 @@ public class TaskHandler {
                 /* TODO: proxy support */
                 break;
         }
+        task.syncInfo(Repo.SyncAction.UPDATE);
         if (handleTaskInterface != null) {
             //后处理，比如交给app重命名或是移动文件等
             handleTaskInterface.handle(info);

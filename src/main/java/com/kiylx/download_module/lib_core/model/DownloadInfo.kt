@@ -1,7 +1,6 @@
 package com.kiylx.download_module.lib_core.model
 
 import com.kiylx.download_module.view.genSimpleDownloadInfo
-import java.lang.IllegalArgumentException
 import java.util.*
 
 class DownloadInfo(var url: String, var fileFolder: String, var fileName: String = "") {
@@ -28,7 +27,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
         }
     var userAgent: String? = null
     var referer: String=""
-    var lifeCycle: TaskLifecycle = TaskLifecycle.OH
+    var lifeCycle: TaskLifecycle = TaskLifecycle.OH//这是task的生命周期状态
         set(value) {
             field = value
             simpleDownloadInfo.state = value
@@ -38,7 +37,9 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
             field = value
             simpleDownloadInfo.isRunning = value
         }
-    var finalCode = StatusCode.STATUS_INIT
+   var taskResult: TaskResult.TaskResultCode=TaskResult.TaskResultCode.OH//任务结果，成功或失败，暂停等
+
+    var finalCode = StatusCode.STATUS_INIT//下载的详细结果
         //FinalCode 下载任务成功与否，是不是在等在网络重新下载，结果同步至此
         set(value) {
             field = value
@@ -69,7 +70,6 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
     var splitEnd: Array<Long?> = emptyArray()
 
     /**每个分块的已下载大小 实际上可以通过 spiltStart和splitEnd计算出来*/
-    //var currentBytes: LongArray = longArrayOf()
     var currentBytes: Array<Long?> = arrayOfNulls(threadCounts)
 
     fun getDownloadedSize(): Long {
@@ -81,18 +81,20 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
         }
         return size
     }
-
+    var speed: Long = 0L// bytes/s
+    set(value) {
+        field=value
+        simpleDownloadInfo.speed=value
+    }
     fun getPercent(): Long {
         return (getDownloadedSize() / totalBytes) //返回已下载百分比
     }
 
     val isDownloadSuccess: Boolean
         get() = finalCode == StatusCode.STATUS_SUCCESS
-    val uUIDString: String
-        get() = uuid.toString()
 
-    var pieceInfos: MutableList<PieceInfo> = mutableListOf()
-    var pieceResultArray: Array<PieceResult>? = null//分块的结果，目前还没有使用
+    //var pieceInfos: MutableList<PieceInfo> = mutableListOf()
+    //var pieceResultArray: Array<PieceResult>? = null//分块的结果，目前还没有使用
 
     var checkSum: String? = null // MD5, SHA-256。 添加下载生成downloadinfo时添加，也可不添加 。若添加此值，在下载完成时，会校验此值
     var description: String? = null//下载描述信息
@@ -163,6 +165,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
 
         @JvmStatic
         fun modifyMsg(info: DownloadInfo, verifyResult: VerifyResult) {
+            info.taskResult = verifyResult.taskResultCode
             info.finalCode = verifyResult.finalCode
             info.finalMsg = verifyResult.message
         }

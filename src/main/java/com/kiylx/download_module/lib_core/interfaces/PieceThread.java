@@ -16,7 +16,8 @@ public abstract class PieceThread implements Callable<PieceResult> {
     /* 在进度条更新之前必须完成的最小进度量 */
     public static final int MIN_PROGRESS_STEP = 65536;//64kib
     /* 更新进度条之前必须经过的最短时间, 单位：ms */
-    public static final long MIN_PROGRESS_TIME = 2000;
+    public static final long MIN_PROGRESS_TIME = 1500;
+    public static final long INFO_MIN_PROGRESS_TIME = 800;
 
     public UUID infoId;
     public int blockId = 0;
@@ -57,6 +58,10 @@ public abstract class PieceThread implements Callable<PieceResult> {
         pieceInfo.setStart(start);
     }
 
+    /**
+     * 将delta累加到分块的开始
+     * @param delta 比起上次下载了多少数据
+     */
     public void startPlus(long delta) {
         pieceInfo.startPlus(delta);
         pieceInfo.curBytesPlus(delta);

@@ -8,5 +8,5 @@ import com.kiylx.download_module.lib_core.model.TaskResult.TaskResultCode
 data class VerifyResult(
     var finalCode: Int = StatusCode.STATUS_INIT,
     var message: String = "",
-    var taskResultCode: TaskResultCode? = null,
+    var taskResultCode: TaskResultCode=TaskResultCode.OH,
 )

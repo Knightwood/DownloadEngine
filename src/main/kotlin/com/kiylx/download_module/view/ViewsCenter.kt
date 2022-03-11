@@ -11,6 +11,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * 周期性的获取所有的simpledownloadinfo
+ */
 class ViewsCenter {
 
     private val downloadResultListeners = ConcurrentLinkedQueue<DownloadResultListener>()
@@ -22,7 +25,6 @@ class ViewsCenter {
 
     init {
         tasks = WeakReference(getContext().taskHandler)
-        tasks!!.get()?.addViewCenter(this)
         infosList_active = tasks?.get()?.getActiveList();
         infosList_wait = tasks?.get()?.getWaitingList();
         infosList_finish = tasks?.get()?.getFinishList();

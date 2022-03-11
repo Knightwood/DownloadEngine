@@ -21,15 +21,20 @@ public abstract class DownloadTask implements Callable<TaskResult>{
     /**
      * 停止下载
      * 完全停止下载，不接受时间或其他条件推迟下载
+     * 但方法本身只是更改状态信息，需要外部实现真正的取消下载逻辑
      */
     public abstract void requestCancel();
 
     /**
      * 暂停下载，或者推迟下载任务
      * 此状态后，任务被暂停，待时机合适（比如延迟一定时间）或手动，重启下载任务
+     * 但方法本身只是更改状态信息，需要外部实现真正的停止下载逻辑
      */
     public abstract void requestStop();
 
+    /**
+     * 方法本身只是更改状态信息，需要外部实现真正的恢复下载逻辑
+     */
     public abstract void requestResume();
 
     public boolean isRunning() {
@@ -79,6 +84,7 @@ public abstract class DownloadTask implements Callable<TaskResult>{
     public void setRecoveryFromDisk(boolean recoveryFromDisk) {
         this.recoveryFromDisk = recoveryFromDisk;
     }
+    public abstract void syncInfo(Repo.SyncAction action);
 
     /**
      * task与pieceTask之间的接口
