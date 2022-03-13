@@ -57,60 +57,60 @@ public enum TaskLifecycle {
 
         public static int guessMoveState(TaskLifecycle old, TaskLifecycle now) {
             switch (old) {
-                case OH, CREATE, RESTART, START -> {
+                case OH,CREATE,RESTART,START : {
                     switch (now) {
-                        case OH, CREATE, RESTART, START -> {
+                        case OH, CREATE, RESTART, START : {
                             return NO_CHANGED;
                         }
-                        case RUNNING -> {
+                        case RUNNING : {
                             return MOVE_TO_ACTIVE;
                         }
-                        case STOP -> {
+                        case STOP : {
                             return MOVE_TO_WAITING;
                         }
-                        case SUCCESS, CANCEL, FAILED -> {
+                        case SUCCESS, CANCEL, FAILED : {
                             return MOVE_TO_FINISH;
                         }
                     }
                 }
-                case RUNNING -> {
+                case RUNNING : {
                     switch (now) {
-                        case OH, CREATE, RESTART, START, STOP -> {
+                        case OH, CREATE, RESTART, START, STOP : {
                             return MOVE_TO_WAITING;
                         }
-                        case RUNNING -> {
+                        case RUNNING : {
                             return NO_CHANGED;
                         }
-                        case SUCCESS, CANCEL, FAILED -> {
+                        case SUCCESS, CANCEL, FAILED : {
                             return MOVE_TO_FINISH;
                         }
                     }
                 }
-                case STOP -> {
+                case STOP : {
                     switch (now) {
-                        case OH, CREATE, RESTART, START -> {
+                        case OH, CREATE, RESTART, START : {
                             return MOVE_TO_WAITING;
                         }
-                        case RUNNING -> {
+                        case RUNNING : {
                             return MOVE_TO_ACTIVE;
                         }
-                        case STOP -> {
+                        case STOP : {
                             return NO_CHANGED;
                         }
-                        case SUCCESS, CANCEL, FAILED -> {
+                        case SUCCESS, CANCEL, FAILED : {
                             return MOVE_TO_FINISH;
                         }
                     }
                 }
-                case SUCCESS, CANCEL, FAILED -> {
+                case SUCCESS, CANCEL, FAILED : {
                     switch (now) {
-                        case OH, CREATE, RESTART, START, STOP -> {
+                        case OH, CREATE, RESTART, START, STOP : {
                             return MOVE_TO_WAITING;
                         }
-                        case RUNNING -> {
+                        case RUNNING : {
                             return MOVE_TO_ACTIVE;
                         }
-                        case SUCCESS, CANCEL, FAILED -> {
+                        case SUCCESS, CANCEL, FAILED : {
                             return NO_CHANGED;
                         }
                     }
