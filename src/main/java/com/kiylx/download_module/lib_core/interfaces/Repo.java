@@ -70,9 +70,17 @@ public interface Repo {
      * @return 返回kind类型的下载信息集合
      */
     List<SimpleDownloadInfo> queryList(int kind);
-//OTHER
+
+    //OTHER
+
+    /**
+     * 同步数据库与通知视图更新所用
+     */
     enum SyncAction {
-        ADD, UPDATE, QUERY, DELETE, MODIFY
+        ADD,//用途：1.添加数据到数据库 2.通知界面更新
+        UPDATE,//用途：1.更新数据库信息 2.通知视图更新界面
+        UPDATE_STATE,//1.更新数据库信息 2.更新下载状态，等待-下载-停止-恢复-完成
+        DELETE//用途：1.删除数据库中信息 2.通知视图更新界面
     }
 
 }

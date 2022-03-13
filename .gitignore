@@ -102,3 +102,4 @@ fabric.properties
 /build/kotlin/compileKotlin/dirty-sources.txt
 
 build/
+/src/test/

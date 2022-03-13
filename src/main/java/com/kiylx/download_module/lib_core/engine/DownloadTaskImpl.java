@@ -23,7 +23,6 @@ import java.util.concurrent.Future;
 import static com.kiylx.download_module.ContextKt.getContext;
 import static com.kiylx.download_module.lib_core.interfaces.PieceThread.INFO_MIN_PROGRESS_TIME;
 import static com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROGRESS_STEP;
-import static com.kiylx.download_module.lib_core.interfaces.PieceThread.MIN_PROGRESS_TIME;
 import static com.kiylx.download_module.lib_core.model.StatusCode.*;
 import static com.kiylx.download_module.lib_core.model.TaskResult.TaskResultCode.*;
 import static java.net.HttpURLConnection.*;
@@ -73,7 +72,7 @@ public class DownloadTaskImpl extends DownloadTask {
     public DownloadTaskImpl(@NonNull DownloadInfo info) {
         super();
         this.info = info;
-        getLifecycle().initState(TaskLifecycle.OH, TaskLifecycle.OH);
+        getLifecycleCollection().initState(TaskLifecycle.OH, TaskLifecycle.OH);
         fs = getContext().getFileKit();
     }
 
@@ -197,14 +196,14 @@ public class DownloadTaskImpl extends DownloadTask {
             setRecoveryFromDisk(false);
             //Wait all threads
             System.out.println("等待线程池下载完成");
+            syncInfo(Repo.SyncAction.ADD);//此处信息初始化完成，开始执行下载。将信息存入数据库
             futureList = exec.invokeAll(pieceThreads);
-
         } catch (Exception e) {
             e.printStackTrace();
             //System.out.println(Thread.currentThread().getName() + "被中断, 中断标识: " + Thread.currentThread().isInterrupted());
-            verifyResult = parseResult(futureList);
-            return verifyResult;
+            setLifecycleState(TaskLifecycle.FAILED);
         } finally {
+            setFlag(false);//不要忘记这里，任务结束，修正isRunning状态
             verifyResult = parseResult(futureList);
             DownloadInfo.modifyMsg(info, verifyResult);//下载结果写入DownloadInfo
         }
@@ -216,6 +215,14 @@ public class DownloadTaskImpl extends DownloadTask {
      * @return 根据当前任务所处生命周期，返回任务结果
      */
     private VerifyResult parseResult(List<Future<PieceResult>> futureList) {
+        switch (getLifecycleCollection().getNowState()) {//这里只处理了lifecycle但没有校验分块的结果，还要改吗？
+            case STOP:
+                return generateVerifyResult(STATUS_STOPPED, "download task paused", PAUSED);
+            case CANCEL:
+                return generateVerifyResult(STATUS_CANCELLED, "task has been dropped", CANCELED);
+        }
+
+        setLifecycleState(TaskLifecycle.FAILED);//预先猜测结果，校验后修正
         if (info.getFinalCode() == HTTP_UNAVAILABLE) {
             return generateVerifyResult(STATUS_WAITING_TO_RETRY, "waiting network to retry download", FAILED);
         }
@@ -224,12 +231,7 @@ public class DownloadTaskImpl extends DownloadTask {
         }
         if (futureList.size() != info.getThreadCounts())
             return generateVerifyResult(STATUS_ERROR, "some piece download failed", FAILED);
-        switch (getLifecycle().getNowState()) {//这里只处理了lifecycle但没有校验分块的结果，还要改吗？
-            case STOP:
-                return generateVerifyResult(STATUS_STOPPED, "download task paused", PAUSED);
-            case DROP:
-                return generateVerifyResult(STATUS_CANCELLED, "task has been dropped", CANCELED);
-        }
+
         //没有取消或停止下载，最终任务执行结束的结果，成功或出错
         for (Future<PieceResult> pieceResultFuture : futureList) {
             try {//遍历分块结果，拿到最终结果
@@ -237,6 +239,7 @@ public class DownloadTaskImpl extends DownloadTask {
                 if (!isStatusCompleted(code)) {
                     return generateVerifyResult(STATUS_ERROR, "something wrong", FAILED);
                 } else {
+                    setLifecycleState(TaskLifecycle.SUCCESS);
                     return generateVerifyResult(STATUS_SUCCESS, "Download Completed", DOWNLOAD_COMPLETE);
                 }
             } catch (InterruptedException | ExecutionException e) {
@@ -248,26 +251,28 @@ public class DownloadTaskImpl extends DownloadTask {
 
     @Override
     public void requestCancel() {
-        if (getLifecycle().getNowState() != TaskLifecycle.RUNNING)
-            syncInfo(Repo.SyncAction.UPDATE);
-        setLifecycleState(TaskLifecycle.DROP);
         setFlag(false);
+        setLifecycleState(TaskLifecycle.CANCEL);
     }
 
     @Override
     public void requestStop() {
-        if (getLifecycle().getNowState() != TaskLifecycle.RUNNING)
-            syncInfo(Repo.SyncAction.UPDATE);
-        setLifecycleState(TaskLifecycle.STOP);
         setFlag(false);
+        setLifecycleState(TaskLifecycle.STOP);
     }
 
     @Override
     public void requestResume() {
-        setLifecycleState(TaskLifecycle.RESTART);
         setFlag(true);
+        setLifecycleState(TaskLifecycle.RESTART);
     }
 
+    /**
+     *
+     * @param canRunning 是否可以运行
+     *                   false：不可另task继续运行，所以，设置停止标志并终止线程池
+     *                   true：继续运行，进设置允许下载标志
+     */
     private void setFlag(boolean canRunning) {
         for (PieceThread thread : pieceThreads) {
             thread.isRunning = canRunning;
@@ -306,6 +311,7 @@ public class DownloadTaskImpl extends DownloadTask {
         if (pieceThreads != null) {
             pieceThreads.clear();
         }
+        viewSources=null;
     }
 
     /**
@@ -323,6 +329,8 @@ public class DownloadTaskImpl extends DownloadTask {
     public void syncInfo(Repo.SyncAction action) {
         if (repo != null)
             repo.syncInfoToDisk(info, action);
+        if (viewSources!=null)
+            viewSources.notifyViewsChanged(info,action,getLifecycleCollection());
     }
 
     /**

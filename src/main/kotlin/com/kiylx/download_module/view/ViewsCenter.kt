@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * 周期性的获取所有的simpledownloadinfo
  */
+@Deprecated("outDated")
 class ViewsCenter {
 
     private val downloadResultListeners = ConcurrentLinkedQueue<DownloadResultListener>()

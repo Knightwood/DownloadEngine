@@ -4,6 +4,7 @@ import com.kiylx.download_module.DownloadsListKind
 import com.kiylx.download_module.lib_core.engine.TaskHandler
 import java.util.ArrayList
 
+@Deprecated("outDated")
 fun TaskHandler.getActiveList(viewsAction: Int =ViewsAction.generate): MutableList<SimpleDownloadInfo> {
     val list: MutableList<SimpleDownloadInfo> = ArrayList()
     list.addAll(getDownloadTaskList(DownloadsListKind.active_kind).covert(viewsAction))

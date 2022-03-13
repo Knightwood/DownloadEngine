@@ -13,6 +13,7 @@ import com.kiylx.download_module.lib_core.model.TaskLifecycle;
 import com.kiylx.download_module.lib_core.model.TaskResult;
 import com.kiylx.download_module.utils.DigestUtils;
 import com.kiylx.download_module.utils.java_log_pack.Log;
+import com.kiylx.download_module.view.ViewSources;
 import com.kiylx.download_module.view.ViewsCenter;
 
 import io.reactivex.disposables.CompositeDisposable;
@@ -41,6 +42,17 @@ public class TaskHandler {
 
     //外界把接口实现注册到这里，以此实现在下载完成后，另外界自动处理后续操作，比如重命名文件并移动到某一个特定目录
     private HandleTaskInterface handleTaskInterface;
+    private ViewSources viewSources;
+
+    public void registerViewSources(ViewSources viewSources) {
+        if (this.viewSources == null)
+            this.viewSources = viewSources;
+    }
+
+    public void unRegisterViewSources(ViewSources viewSources) {
+        //移除接口
+        this.viewSources = null;
+    }
 
     public void registerHandle(HandleTaskInterface taskHandler) {
         if (handleTaskInterface == null)
@@ -101,6 +113,7 @@ public class TaskHandler {
      */
     public boolean addDownloadTask(DownloadTask task) {
         boolean b = false;
+        task.viewSources=this.viewSources;
         if (isMaxActiveDownloads()) {
             System.out.println("队列满了，等待下载");
             wait.add(task);
@@ -111,7 +124,6 @@ public class TaskHandler {
             runTask(task);
             b = true;
         }
-        task.syncInfo(Repo.SyncAction.UPDATE);
         return b;
     }
 

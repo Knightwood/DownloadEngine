@@ -2,6 +2,7 @@ package com.kiylx.download_module.lib_core.interfaces;
 
 import com.kiylx.download_module.file_platform.FakeFile;
 import com.kiylx.download_module.lib_core.model.*;
+import com.kiylx.download_module.view.ViewSources;
 
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -9,11 +10,12 @@ import java.util.concurrent.Future;
 
 public abstract class DownloadTask implements Callable<TaskResult>{
     public int moveState = 0;
-    private LifecycleCollection lifecycle;
+    public ViewSources viewSources;
+    private LifecycleCollection lifecycleCollection;
     private boolean recoveryFromDisk = false;
 
     public DownloadTask() {
-        lifecycle = new LifecycleCollection();
+        lifecycleCollection = new LifecycleCollection();
     }
 
     protected abstract DownloadTask initTask();
@@ -38,7 +40,7 @@ public abstract class DownloadTask implements Callable<TaskResult>{
     public abstract void requestResume();
 
     public boolean isRunning() {
-        return lifecycle.getNowState() == TaskLifecycle.RUNNING;
+        return lifecycleCollection.getNowState() == TaskLifecycle.RUNNING;
     }
 
     public abstract DownloadInfo getInfo();
@@ -52,29 +54,30 @@ public abstract class DownloadTask implements Callable<TaskResult>{
         return this.moveState;
     }
 
-    public LifecycleCollection getLifecycle() {
-        return lifecycle;
+    public LifecycleCollection getLifecycleCollection() {
+        return lifecycleCollection;
     }
 
     public void setLifecycleState(TaskLifecycle state) {
-        this.lifecycle.setLifecycleState(state);
+        this.lifecycleCollection.setLifecycleState(state);
         getInfo().setLifeCycle(state);
+        syncInfo(Repo.SyncAction.UPDATE_STATE);
     }
 
     public boolean isStop() {
-        return lifecycle.getNowState() == TaskLifecycle.STOP;
+        return lifecycleCollection.getNowState() == TaskLifecycle.STOP;
     }
 
     public void stateStopped() {
-        this.lifecycle.setLifecycleState(TaskLifecycle.STOP);
+        this.lifecycleCollection.setLifecycleState(TaskLifecycle.STOP);
     }
 
     public boolean isCancel() {
-        return lifecycle.getNowState() == TaskLifecycle.DROP;
+        return lifecycleCollection.getNowState() == TaskLifecycle.CANCEL;
     }
 
     public void stateCancel() {
-        this.lifecycle.setLifecycleState(TaskLifecycle.DROP);
+        this.lifecycleCollection.setLifecycleState(TaskLifecycle.CANCEL);
     }
 
     public boolean isRecoveryFromDisk() {

@@ -54,8 +54,8 @@ public class TaskResult {
 
     public enum TaskResultCode {
         OH,//初始化
-        DOWNLOAD_COMPLETE, //任务完成，文件下载成功
-        FAILED,//失败
+        DOWNLOAD_COMPLETE, //下载任务完成，文件下载成功
+        FAILED,//下载失败
         PAUSED, //暂停下载，等待恢复
         CANCELED,//取消
         ERROR //出错

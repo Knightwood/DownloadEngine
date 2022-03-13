@@ -11,6 +11,8 @@ import com.kiylx.download_module.lib_core.interfaces.Repo
 import com.kiylx.download_module.lib_core.network.HttpManager
 import com.kiylx.download_module.lib_core.repository.RepoImpl
 import com.kiylx.download_module.utils.kotlin.CDelegate
+import com.kiylx.download_module.view.ViewObserver
+import com.kiylx.download_module.view.ViewSources
 
 class Context private constructor(configs: ContextConfigs) {
     private var setting: Context.ContextConfigs = configs
@@ -47,8 +49,12 @@ class Context private constructor(configs: ContextConfigs) {
      * 外界将接口实现通过此方法注册到TaskHandler中。
      * 以此实现在下载完成后，外界自动处理下载文件，比如重命名文件并移动到某一个特定目录
      */
-    fun registerDownloadFinishHandle(downloadFinishHandler: TaskHandler.HandleTaskInterface){
+    fun setDownloadFinishHandle(downloadFinishHandler: TaskHandler.HandleTaskInterface){
             taskHandler.registerHandle(downloadFinishHandler)
+    }
+
+    fun setViewObserver(viewSources: ViewSources) {
+        taskHandler.registerViewSources(viewSources)
     }
 
     companion object {
