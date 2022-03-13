@@ -55,67 +55,89 @@ public enum TaskLifecycle {
         //队列没有变化
         public static final int NO_CHANGED = 4;
 
+        //如果是java12或是17多好，java8的switch难用又难看，以后再优化吧
         public static int guessMoveState(TaskLifecycle old, TaskLifecycle now) {
-            switch (old) {
-                case OH,CREATE,RESTART,START : {
-                    switch (now) {
-                        case OH, CREATE, RESTART, START : {
+            if (old == OH || old == CREATE || old == RESTART || old == START) {
+                switch (now) {
+                    case OH:
+                        CREATE:
+                        RESTART:
+                        START:{
                             return NO_CHANGED;
                         }
-                        case RUNNING : {
-                            return MOVE_TO_ACTIVE;
-                        }
-                        case STOP : {
-                            return MOVE_TO_WAITING;
-                        }
-                        case SUCCESS, CANCEL, FAILED : {
+                    case RUNNING: {
+                        return MOVE_TO_ACTIVE;
+                    }
+                    case STOP: {
+                        return MOVE_TO_WAITING;
+                    }
+                    case SUCCESS:
+                        CANCEL:
+                        FAILED:{
                             return MOVE_TO_FINISH;
                         }
-                    }
-                }
-                case RUNNING : {
-                    switch (now) {
-                        case OH, CREATE, RESTART, START, STOP : {
-                            return MOVE_TO_WAITING;
-                        }
-                        case RUNNING : {
-                            return NO_CHANGED;
-                        }
-                        case SUCCESS, CANCEL, FAILED : {
-                            return MOVE_TO_FINISH;
-                        }
-                    }
-                }
-                case STOP : {
-                    switch (now) {
-                        case OH, CREATE, RESTART, START : {
-                            return MOVE_TO_WAITING;
-                        }
-                        case RUNNING : {
-                            return MOVE_TO_ACTIVE;
-                        }
-                        case STOP : {
-                            return NO_CHANGED;
-                        }
-                        case SUCCESS, CANCEL, FAILED : {
-                            return MOVE_TO_FINISH;
-                        }
-                    }
-                }
-                case SUCCESS, CANCEL, FAILED : {
-                    switch (now) {
-                        case OH, CREATE, RESTART, START, STOP : {
-                            return MOVE_TO_WAITING;
-                        }
-                        case RUNNING : {
-                            return MOVE_TO_ACTIVE;
-                        }
-                        case SUCCESS, CANCEL, FAILED : {
-                            return NO_CHANGED;
-                        }
-                    }
                 }
             }
+            if (old == RUNNING) {
+                switch (now) {
+                    case OH:
+                        CREATE:
+                        RESTART:
+                        START:
+                        STOP:{
+                            return MOVE_TO_WAITING;
+                        }
+                    case RUNNING: {
+                        return NO_CHANGED;
+                    }
+                    case SUCCESS:
+                        CANCEL:
+                        FAILED:{
+                            return MOVE_TO_FINISH;
+                        }
+                }
+            }
+            if (old == STOP) {
+                switch (now) {
+                    case OH:
+                        CREATE:
+                        RESTART:
+                        START:{
+                            return MOVE_TO_WAITING;
+                        }
+                    case RUNNING: {
+                        return MOVE_TO_ACTIVE;
+                    }
+                    case STOP: {
+                        return NO_CHANGED;
+                    }
+                    case SUCCESS:
+                        CANCEL:
+                        FAILED:{
+                            return MOVE_TO_FINISH;
+                        }
+                }
+            }
+            if (old == SUCCESS || old == CANCEL || old == FAILED) {
+                switch (now) {
+                    case OH:
+                        CREATE:
+                        RESTART:
+                        START:
+                        STOP:{
+                            return MOVE_TO_WAITING;
+                        }
+                    case RUNNING: {
+                        return MOVE_TO_ACTIVE;
+                    }
+                    case SUCCESS:
+                        CANCEL:
+                        FAILED:{
+                            return NO_CHANGED;
+                        }
+                }
+            }
+
             return NO_CHANGED;
         }
     }
