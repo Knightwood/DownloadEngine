@@ -1,6 +1,7 @@
 package com.kiylx.download_module.lib_core.interfaces;
 
-import com.kiylx.download_module.lib_core.model.TaskResult;
+import com.kiylx.download_module.interfaces.DownloadTask;
+import com.kiylx.download_module.model.TaskResult;
 import com.kiylx.download_module.view.SimpleDownloadInfo;
 import com.kiylx.download_module.view.ViewsAction;
 

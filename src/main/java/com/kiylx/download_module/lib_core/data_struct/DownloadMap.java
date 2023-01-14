@@ -1,14 +1,12 @@
 package com.kiylx.download_module.lib_core.data_struct;
 
-import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
+import com.kiylx.download_module.interfaces.DownloadTask;
 import com.kiylx.download_module.lib_core.interfaces.TasksCollection;
-import com.kiylx.download_module.lib_core.model.TaskResult;
+import com.kiylx.download_module.model.TaskResult;
 import com.kiylx.download_module.view.SimpleDownloadInfo;
 import com.kiylx.download_module.view.ViewsAction;
 
 import java.util.*;
-
-import static com.kiylx.download_module.view.SimpleDownloadInfoKt.genSimpleDownloadInfo;
 
 public class DownloadMap implements TasksCollection {
     private final Map<UUID, DownloadTask> map = new HashMap<>();

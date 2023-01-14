@@ -1,9 +1,9 @@
 package com.kiylx.download_module.view
 
-import com.kiylx.download_module.lib_core.model.DownloadInfo
-import com.kiylx.download_module.lib_core.model.StatusCode
-import com.kiylx.download_module.lib_core.model.TaskLifecycle
-import com.kiylx.download_module.lib_core.model.TaskResult
+import com.kiylx.download_module.model.DownloadInfo
+import com.kiylx.download_module.model.StatusCode
+import com.kiylx.download_module.model.TaskLifecycle
+import com.kiylx.download_module.model.TaskResult
 import java.util.*
 
 data class SimpleDownloadInfo(
@@ -19,7 +19,7 @@ data class SimpleDownloadInfo(
     var finalMsg: String? = "null",//结果相关的信息
     var state: TaskLifecycle,//当前任务状态
     var isRunning: Boolean = false,//是否正在下载
-    var taskResult:TaskResult.TaskResultCode
+    var taskResult: TaskResult.TaskResultCode
 ) {
     fun print() {
         print("uuid: $uuid \n" +

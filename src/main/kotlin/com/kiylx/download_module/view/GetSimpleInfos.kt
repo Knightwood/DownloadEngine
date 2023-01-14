@@ -1,7 +1,7 @@
 package com.kiylx.download_module.view
 
 import com.kiylx.download_module.DownloadsListKind
-import com.kiylx.download_module.lib_core.engine.TaskHandler
+import com.kiylx.download_module.lib_core.engine1.TaskHandler
 import java.util.ArrayList
 
 @Deprecated("outDated")

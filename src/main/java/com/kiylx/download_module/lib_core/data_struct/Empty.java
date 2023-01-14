@@ -1,8 +1,8 @@
 package com.kiylx.download_module.lib_core.data_struct;
 
-import com.kiylx.download_module.lib_core.interfaces.DownloadTask;
+import com.kiylx.download_module.interfaces.DownloadTask;
 import com.kiylx.download_module.lib_core.interfaces.TasksCollection;
-import com.kiylx.download_module.lib_core.model.TaskResult;
+import com.kiylx.download_module.model.TaskResult;
 import com.kiylx.download_module.view.SimpleDownloadInfo;
 
 import java.util.ArrayList;

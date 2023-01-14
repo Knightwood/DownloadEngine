@@ -1,17 +1,16 @@
 package com.kiylx.download_module
 
-import com.kiylx.download_module.fileskit.FileKit
-import com.kiylx.download_module.fileskit.FileKitImpl
-import com.kiylx.download_module.file_platform.system.SysCall
-import com.kiylx.download_module.file_platform.system.SysCallImpl
-import com.kiylx.download_module.lib_core.engine.TaskHandler
-import com.kiylx.download_module.lib_core.interfaces.VerifyFactory
-import com.kiylx.download_module.lib_core.model.VerifyFactoryImpl
-import com.kiylx.download_module.lib_core.interfaces.Repo
-import com.kiylx.download_module.lib_core.network.HttpManager
+import com.kiylx.download_module.file.fileskit.FileKit
+import com.kiylx.download_module.file.fileskit.FileKitImpl
+import com.kiylx.download_module.file.file_platform.system.SysCall
+import com.kiylx.download_module.file.file_platform.system.SysCallImpl
+import com.kiylx.download_module.lib_core.engine1.TaskHandler
+import com.kiylx.download_module.interfaces.VerifyFactory
+import com.kiylx.download_module.model.VerifyFactoryImpl
+import com.kiylx.download_module.interfaces.Repo
+import com.kiylx.download_module.network.HttpManager
 import com.kiylx.download_module.lib_core.repository.RepoImpl
-import com.kiylx.download_module.utils.kotlin.CDelegate
-import com.kiylx.download_module.view.ViewObserver
+import com.kiylx.download_module.utils.CDelegate
 import com.kiylx.download_module.view.ViewSources
 
 class Context private constructor(configs: ContextConfigs) {
@@ -39,7 +38,9 @@ class Context private constructor(configs: ContextConfigs) {
 
     val SysCallKit: SysCall by CDelegate(setting.sysCallClazz, ::SysCallImpl)
 
-    val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz, ::FileKitImpl)
+    val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz,
+        ::FileKitImpl
+    )
 
     val taskHandler: TaskHandler by lazy { TaskHandler.getInstance(limit) }
     val verifyFactory: VerifyFactory by lazy { VerifyFactoryImpl() }

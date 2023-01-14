@@ -36,6 +36,9 @@ public final class MimeTypeUtils {
 
     private static final Map<String, String> extensionToMimeTypeMap = new HashMap<String, String>();
 
+    private static final String uniType="application/octet-stream";
+    private static final String uniExt="unknow";
+
     static {
         // The following table is based on /etc/mime.types data minus
         // chemical/* MIME types and MIME types that don't map to any
@@ -451,9 +454,10 @@ public final class MimeTypeUtils {
      */
     public static String guessMimeTypeFromExtension(String extension) {
         if (extension == null || extension.isEmpty()) {
-            return null;
+            return uniType;
         }
-        return extensionToMimeTypeMap.get(extension);
+        String result=extensionToMimeTypeMap.get(extension);
+        return result==null? uniType:result;
     }
 
     /**
@@ -477,9 +481,10 @@ public final class MimeTypeUtils {
      */
     public static String guessExtensionFromMimeType(String mimeType) {
         if (mimeType == null || mimeType.isEmpty()) {
-            return null;
+            return uniExt;
         }
-        return mimeTypeToExtensionMap.get(mimeType);
+        String result=mimeTypeToExtensionMap.get(mimeType);
+        return result==null? uniExt:result;
     }
 }
 

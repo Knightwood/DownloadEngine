@@ -1,11 +1,11 @@
 package com.kiylx.download_module.view
 
-import com.kiylx.download_module.lib_core.interfaces.DownloadTask
-import com.kiylx.download_module.lib_core.interfaces.Repo
-import com.kiylx.download_module.lib_core.interfaces.Repo.SyncAction.*
-import com.kiylx.download_module.lib_core.model.DownloadInfo
-import com.kiylx.download_module.lib_core.model.TaskLifecycle
-import com.kiylx.download_module.lib_core.model.TaskLifecycle.*
+import com.kiylx.download_module.interfaces.DownloadTask
+import com.kiylx.download_module.interfaces.Repo
+import com.kiylx.download_module.interfaces.Repo.SyncAction.*
+import com.kiylx.download_module.model.DownloadInfo
+import com.kiylx.download_module.model.TaskLifecycle
+import com.kiylx.download_module.model.TaskLifecycle.*
 
 class ViewSources private constructor() {
     //  val activeInfos: MutableList<SimpleDownloadInfo> = mutableListOf()
@@ -111,5 +111,5 @@ enum class UpdateStatus {
 }
 
 interface ViewObserver {
-    fun notifyViewUpdate(info: DownloadInfo?, lifeCycle: TaskLifecycle?,updateStatus: UpdateStatus)
+    fun notifyViewUpdate(info: DownloadInfo?, lifeCycle: TaskLifecycle?, updateStatus: UpdateStatus)
 }

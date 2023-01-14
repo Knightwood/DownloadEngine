@@ -21,12 +21,18 @@ class MyLogFormatter extends Formatter {
     public String format(LogRecord record) {
         StringBuilder builder = new StringBuilder(1000);
         builder.append(df.format(new Date(record.getMillis()))).append(" - ");
-        builder.append("[").append(record.getSourceClassName()).append(".");
-        builder.append(record.getSourceMethodName()).append("] - \n");
+        //下面两行打印调用日志打印的类名和方法名
+//        builder.append("[").append(record.getSourceClassName()).append(".");
+//        builder.append(record.getSourceMethodName()).append("] - \n");
         builder.append("\t[").append(record.getLevel()).append("] - ");
         builder.append(formatMessage(record));
         builder.append("\n\n");
         return builder.toString();
+    }
+
+    @Override
+    public String formatMessage(LogRecord record) {
+        return super.formatMessage(record);
     }
 
     public String getHead(Handler h) {

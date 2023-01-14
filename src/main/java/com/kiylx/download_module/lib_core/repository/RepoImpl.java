@@ -1,10 +1,10 @@
 package com.kiylx.download_module.lib_core.repository;
 
 import com.kiylx.download_module.view.SimpleDownloadInfo;
-import com.kiylx.download_module.lib_core.interfaces.Repo;
-import com.kiylx.download_module.lib_core.model.DownloadInfo;
-import com.kiylx.download_module.lib_core.model.HeaderStore;
-import com.kiylx.download_module.lib_core.model.PieceInfo;
+import com.kiylx.download_module.interfaces.Repo;
+import com.kiylx.download_module.model.DownloadInfo;
+import com.kiylx.download_module.model.HeaderStore;
+import com.kiylx.download_module.model.PieceInfo;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;

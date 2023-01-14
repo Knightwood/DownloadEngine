@@ -1,10 +1,10 @@
 package com.kiylx.download_module
 
-import com.kiylx.download_module.lib_core.engine.DownloadTaskImpl
-import com.kiylx.download_module.lib_core.engine.TaskHandler
-import com.kiylx.download_module.lib_core.interfaces.DownloadTask
+import com.kiylx.download_module.lib_core.engine1.DownloadTaskImpl
+import com.kiylx.download_module.lib_core.engine1.TaskHandler
+import com.kiylx.download_module.interfaces.DownloadTask
 import com.kiylx.download_module.lib_core.interfaces.TasksCollection
-import com.kiylx.download_module.lib_core.model.DownloadInfo
+import com.kiylx.download_module.model.DownloadInfo
 import com.kiylx.download_module.view.SimpleDownloadInfo
 import java.util.*
 

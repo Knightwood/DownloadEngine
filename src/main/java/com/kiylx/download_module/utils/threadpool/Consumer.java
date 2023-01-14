@@ -1,6 +1,6 @@
 package com.kiylx.download_module.utils.threadpool;
 
-import com.kiylx.download_module.lib_core.model.DownloadInfo;
+import com.kiylx.download_module.model.DownloadInfo;
 
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;

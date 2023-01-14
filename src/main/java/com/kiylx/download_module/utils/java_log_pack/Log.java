@@ -3,6 +3,12 @@ package com.kiylx.download_module.utils.java_log_pack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * 此类，使得在日志打印中无法正确打印调用日志打印的类名和方法名
+ * 因此弃用。
+ * 但若无打印类名与方法名的需要，可以使用此类
+ */
+@Deprecated
 public class Log {
     static Logger logger = JavaLogUtil.setLoggerHandler(Level.INFO);
 
