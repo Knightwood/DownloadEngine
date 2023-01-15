@@ -82,11 +82,15 @@ class FDFile(val fileDescriptor: FileDescriptor, platform: Int = android) :
  */
 class PathFile(val path: Path, platform: Int = linux) : FakeFile<Path>(path, platform, pathImpl) {
 
-    private val randomAccessFile: RandomAccessFile by lazy { RandomAccessFile(path.toFile(), "rw") }
 
     override fun get(): Path = path
 
+    private val randomAccessFile: RandomAccessFile by lazy { RandomAccessFile(path.toFile(), "rw") }
+
     override fun seek(pos: Long) = randomAccessFile.seek(pos)
+
+    @Throws(IOException::class)
+    override fun close() = randomAccessFile.close()
 
     @Throws(IOException::class)
     override fun write(b: ByteArray, off: Int, len: Int) {
@@ -97,8 +101,7 @@ class PathFile(val path: Path, platform: Int = linux) : FakeFile<Path>(path, pla
 
     override fun newInputStream(): InputStream = Files.newInputStream(path)
 
-    @Throws(IOException::class)
-    override fun close() = randomAccessFile.close()
+
 
 }
 

@@ -54,8 +54,13 @@ class TaskDataReceiveTest {
         fileName = mime[0];
         mimetype = mime[1];
         ext = mime[2];
-        System.out.println(fileName);
-        System.out.println(mimetype);
-        System.out.println(ext);
+        logger.info(fileName);
+        logger.info(mimetype);
+        logger.info(ext);
+        System.out.printf("整体大小："+info.getTotalBytes()+"\n");
+        for (int i = 0; i < info.getSplitStart().length; i++) {
+            System.out.printf("分块:"+i+"开始pos："+info.getSplitStart()[i]+"---");
+            System.out.printf("结束pos："+info.getSplitEnd()[i]+"\n");
+        }
     }
 }

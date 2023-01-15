@@ -32,6 +32,7 @@ public class PieceThreadImpl extends PieceThread {
 
     private DownloadTask.TaskCallback callback;
     private FakeFile rf;
+    private InputStream inputStream =null;
     private final ConnectionListener connectionListener = new ConnectionListener() {
         @Override
         public void onResponseHandle(Response response, int code, String message) {
@@ -111,25 +112,28 @@ public class PieceThreadImpl extends PieceThread {
         return pieceResult;
     }
 
+    //todo 这里真的需要验证吗？？？
     private boolean verifyResponse(Response response) {
         /*
          * To detect when we're really finished, we either need a length, closed
          * connection, or chunked encoding.
          * 为了检测我们何时真正完成，我们需要一个长度、闭合连接或分块编码。
          */
-        boolean hasLength = getTotalBytes() != -1;//有长度
+        boolean hasLength = getTotalBytes() >0;//有长度
         boolean isConnectionClose = "close".equalsIgnoreCase(response.header("Connection"));//关闭
         boolean isEncodingChunked = "chunked".equalsIgnoreCase(response.header("Transfer-Encoding"));//chunked分片
 
-        if (!(hasLength || isConnectionClose || isEncodingChunked)) {//没有长度信息，没有关闭，也不是chunked
+        if (!(hasLength || isConnectionClose || isEncodingChunked)) {
+            //没有长度信息，没有关闭，也不是chunked
             //尝试获取内容长度
             try {
                 long contentLength = Long.parseLong(response.header("Content-Length"));
-                if (contentLength != -1 && pieceInfo.getBlockId() == 0) {//得到长度信息，赋值
+                if (contentLength != -1) {//得到长度信息，赋值
                     pieceInfo.setTotalBytes(contentLength);
                 } else {//没有获得长度信息，报错
                     generatePieceResult(STATUS_CANNOT_RESUME,
                             "Can't know size of download, giving up");
+                    logger.info("Can't know size of download, giving up1");
                     return false;
                 }
 
@@ -137,8 +141,10 @@ public class PieceThreadImpl extends PieceThread {
                 e.printStackTrace();
                 generatePieceResult(STATUS_CANNOT_RESUME,
                         "Can't know size of download, giving up");
+                logger.info("Can't know size of download, giving up2");
                 return false;
             } catch (Exception e) {
+                logger.info("Can't know size of download, giving up3");
                 e.printStackTrace();
                 return false;
             }
@@ -149,20 +155,21 @@ public class PieceThreadImpl extends PieceThread {
 
     private void transferData(Response response) {
         logger.info("传输数据");
-        if (!verifyResponse(response))//验证未通过，return
-            return;
+        //todo 这里真的需要验证吗？？？
+//        if (!verifyResponse(response))//验证未通过，return
+//            return;
         if (response.body() != null) {
-            try (InputStream inputStream = Objects.requireNonNull(response.body()).byteStream()) {
+            try {
+                inputStream = Objects.requireNonNull(response.body()).byteStream();
                 byte[] b = new byte[BUFFER_SIZE];
                 //从流中读取的数据长度
                 int len;
                 //流没有读尽和没有暂停时执行循环以写入文件
                 while (((len = inputStream.read(b)) != -1) && isRunning) {
                     rf.write(b, 0, len);
-                    startPlus(len);//累加进度
+                    curBytesPlus(len);//累加进度
                     if (callback != null)
-                        //callback.update(pieceInfo, isRunning);
-                        updateProgress(len);
+                        updateProgress();
                 }
                 //流没有读尽且暂停时的处理
                 if ((!isRunning) && len != -1) {
@@ -186,7 +193,7 @@ public class PieceThreadImpl extends PieceThread {
             } finally {
                 if (callback != null)
                     callback.update(pieceInfo, isRunning);
-                closeThings();
+                closeThings(response);
             }
         }
     }
@@ -195,7 +202,7 @@ public class PieceThreadImpl extends PieceThread {
     private long currentSize = 0L;
 
     //以时间间隔更新分块及及info信息
-    private void updateProgress(long len) {
+    private void updateProgress() {
         long deltaTime = System.currentTimeMillis() - currentTime;
         long deltaSize = getCurBytes() - currentSize;
 
@@ -212,11 +219,17 @@ public class PieceThreadImpl extends PieceThread {
     /**
      * 线程之行结束的清理
      */
-    private void closeThings() {
+    private void closeThings(Response response) {
         try {
+            if (response != null) {
+                response.close();
+            }
             if (rf != null) {
                 rf.close();
                 rf = null;
+            }
+            if (inputStream!=null){
+                inputStream.close();
             }
             callback = null;
         } catch (IOException e) {
@@ -230,7 +243,7 @@ public class PieceThreadImpl extends PieceThread {
                                                           boolean shouldQueryDb) {
         List<PieceThreadImpl> result = new ArrayList<>();
         if (shouldQueryDb) {//从磁盘恢复
-            List<PieceInfo> pieceInfoList = repo.queryPieceInfo(info.getUuid());
+            List<PieceInfo> pieceInfoList = info.getPiecesList();
             if (!pieceInfoList.isEmpty() && info.getThreadCounts() == pieceInfoList.size()) {
                 for (PieceInfo pieceInfo : pieceInfoList) {
                     result.add(new PieceThreadImpl(callback, pieceInfo));
@@ -238,7 +251,6 @@ public class PieceThreadImpl extends PieceThread {
                 repo.deletePieceInfo(info.getUuid());//已经生成了新的pieceThread,删除存储库中的旧数据
             } else {
                 repo.deletePieceInfo(info.getUuid());
-
                 getContext().getFileKit().rmdir(info.getPath());
                 return generateNewPieceList(info, callback);
             }
@@ -249,23 +261,27 @@ public class PieceThreadImpl extends PieceThread {
         return result;
     }
 
-    public static List<PieceThreadImpl> generateNewPieceList(DownloadInfo info,
+    public static List<PieceThreadImpl> generateNewPieceList(DownloadInfo downloadInfo,
                                                              DownloadTask.TaskCallback callback) {
         List<PieceThreadImpl> result = new ArrayList<>();
         List<PieceInfo> pieceInfos = new ArrayList<>();
         //新任务
-        if (info.getThreadCounts() == 1 || !info.isPartialSupport()) {//单线程下载
+        if (downloadInfo.getThreadCounts() == 1 || !downloadInfo.isPartialSupport()) {//单线程下载
             result = new ArrayList<>(1);
-            PieceThreadImpl thread = new PieceThreadImpl(callback, info.getUuid(), 0, 0, info.getTotalBytes());
+            PieceInfo pieceInfo =new PieceInfo(downloadInfo.getUuid(), 0, 0, downloadInfo.getTotalBytes());
+            PieceThreadImpl thread = new PieceThreadImpl(callback, pieceInfo);
             result.add(thread);
             pieceInfos.add(thread.pieceInfo);
         } else {
-            for (int i = 0; i < info.getThreadCounts(); i++) {
-                PieceThreadImpl thread = new PieceThreadImpl(callback, info.getUuid(), i, info.getSplitStart()[i], info.getSplitEnd()[i]);
+            for (int i = 0; i < downloadInfo.getThreadCounts(); i++) {
+                PieceInfo pieceInfo =new PieceInfo(downloadInfo.getUuid(), i, downloadInfo.getSplitStart()[i], downloadInfo.getSplitEnd()[i]);
+                PieceThreadImpl thread = new PieceThreadImpl(callback, pieceInfo);
                 result.add(thread);
                 pieceInfos.add(thread.pieceInfo);
             }
         }
+        downloadInfo.getPiecesList().clear();
+        downloadInfo.getPiecesList().addAll(pieceInfos);
         return result;
 
     }

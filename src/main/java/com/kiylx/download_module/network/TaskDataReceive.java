@@ -1,5 +1,6 @@
 package com.kiylx.download_module.network;
 
+import com.kiylx.download_module.file.fileskit.FileKit;
 import com.kiylx.download_module.interfaces.RemoteRepo;
 import com.kiylx.download_module.interfaces.Repo;
 import com.kiylx.download_module.model.DownloadInfo;
@@ -17,6 +18,7 @@ import okhttp3.ResponseBody;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.logging.Logger;
 
 import static com.kiylx.download_module.ContextKt.getContext;
@@ -125,9 +127,9 @@ public class TaskDataReceive implements RemoteRepo {
     /**
      * 解析得到的回应，
      *
-     * @param info 下载信息
+     * @param info     下载信息
      * @param response 网络回应
-     * @param queryDb true:旧任务
+     * @param queryDb  true:旧任务
      * @return
      */
     public static TaskResponse parseHeaders(DownloadInfo info, Response response, boolean queryDb) {
@@ -174,12 +176,26 @@ public class TaskDataReceive implements RemoteRepo {
         info.setMimeType(mimetype.type());
         if (!TextUtils.isEmpty(ext))
             info.setExtension(ext);
+        //检查硬盘上是否存在重名文件，并做处理
         //如果文件名不存在,给予文件名。
+        FileKit kit = getContext().getFileKit();
         if (TextUtils.isEmpty(info.getFileName())) {
-            info.setFileName(fileName);
+            String tmpPath = info.getFileFolder() + File.separator + fileName;
+            boolean isExist = kit.isExist(tmpPath, FileKit.FileKind.file);
+            if (isExist) {
+                fileName = LocalDateTime.now() + fileName;
+            }
         } else {
-            info.setFileName(info.getFileName() + EXTENSION_SEPARATOR + ext);
+            fileName=info.getFileName() + EXTENSION_SEPARATOR + ext;
+            String tmpPath = info.getFileFolder() + File.separator + fileName;
+            boolean isExist = kit.isExist(tmpPath, FileKit.FileKind.file);
+            if (isExist) {
+                fileName = LocalDateTime.now() + fileName;
+            }
+            //默认产生下载任务时给的文件名是不包含后缀的
         }
+
+        info.setFileName(fileName);
         info.setPath(info.getFileFolder() + File.separator + info.getFileName());
 
         final String transferEncoding = response.header("Transfer-Encoding");
@@ -188,6 +204,7 @@ public class TaskDataReceive implements RemoteRepo {
         } else {
             info.setTotalBytes(-1);//长度未知
         }
+
         boolean partialSupport = "bytes".equalsIgnoreCase(response.header("Accept-Ranges"));
         info.setPartialSupport(partialSupport);//是否支持断点请求
         info.setThreadCounts(partialSupport ? getContext().getDefaultThreadNum() : 1);
@@ -201,7 +218,7 @@ public class TaskDataReceive implements RemoteRepo {
         info.setFinalCode(STATUS_RUNNING);
         repo.syncInfoToDisk(info, Repo.SyncAction.UPDATE);//更新存储库中downloadInfo信息
         logger.info("解析结束");
-        DownloadInfo info1 = info;
+        //DownloadInfo info1 = info;
         return null;
     }
 

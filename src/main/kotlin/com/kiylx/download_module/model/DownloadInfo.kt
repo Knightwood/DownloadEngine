@@ -14,7 +14,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
             return field
         }
     var mimeType: String? = null
-    var extension:String="unknow"//文件的扩展名
+    var extension: String = "unknow"//文件的扩展名
     var totalBytes: Long = -1L//需要下载文件的总大小，其从response中获取，或者从调用它的方法中给予
     var isHasMetadata = false
     var fetchCount = 0//初始化后，计数是0,获取一次metadata计数加一  //MetaData
@@ -27,7 +27,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
                 field = 0
         }
     var userAgent: String? = null
-    var referer: String=""
+    var referer: String = ""
     var lifeCycle: TaskLifecycle = TaskLifecycle.OH
         //这是task的生命周期状态
         set(value) {
@@ -39,7 +39,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
             field = value
             simpleDownloadInfo.isRunning = value
         }
-   var taskResult: TaskResult.TaskResultCode = TaskResult.TaskResultCode.OH//任务结果，成功或失败，暂停等
+    var taskResult: TaskResult.TaskResultCode = TaskResult.TaskResultCode.OH//任务结果，成功或失败，暂停等
 
     var finalCode = StatusCode.STATUS_INIT
         //下载的详细结果
@@ -62,41 +62,41 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
             if (value <= 0)
                 throw IllegalArgumentException("Piece number can't be less or equal zero")
             if (!isPartialSupport && value > 1)
-                throw  IllegalStateException("The download doesn't support partial download")
+                throw IllegalStateException("The download doesn't support partial download")
 
             if ((totalBytes <= 0 && value != 1) || (totalBytes in 1 until threadCounts))
-                throw  IllegalStateException("The number of pieces can't be more than the number of total bytes")
+                throw IllegalStateException("The number of pieces can't be more than the number of total bytes")
             field = value
         }
-    var blockSize: Long = -1//下载时根据分配线程数量（threadNum）决定的文件分块大小。（最后一个分块可能会小于或大于其他分块大小）
+
     var splitStart: Array<Long?> = emptyArray()
     var splitEnd: Array<Long?> = emptyArray()
 
-    /**每个分块的已下载大小 实际上可以通过 spiltStart和splitEnd计算出来*/
-    var currentBytes: Array<Long?> = arrayOfNulls(threadCounts)
+    //分块集合
+    var piecesList: MutableList<PieceInfo> = mutableListOf()
 
     fun getDownloadedSize(): Long {
         var size: Long = 0L
-        for (i in currentBytes) {
-            if (i != null) {
-                size += i
-            }
+        for (i in piecesList) {
+            size += i.curBytes
         }
         return size
     }
-    var speed: Long = 0L// bytes/s
-    set(value) {
-        field=value
-        simpleDownloadInfo.speed=value
+
+    //更新simpleDownloadInfo中的下载速度
+    // bytes/s
+    fun setSpeed(value: Long) {
+        simpleDownloadInfo.speed = value
     }
+
+    //返回已下载百分比
     fun getPercent(): Long {
-        return (getDownloadedSize() / totalBytes) //返回已下载百分比
+        return (getDownloadedSize() / totalBytes)
     }
 
     val isDownloadSuccess: Boolean
         get() = finalCode == StatusCode.STATUS_SUCCESS
 
-    //var pieceInfos: MutableList<PieceInfo> = mutableListOf()
     //var pieceResultArray: Array<PieceResult>? = null//分块的结果，目前还没有使用
 
     var checkSum: String? = null // MD5, SHA-256。 添加下载生成downloadinfo时添加，也可不添加 。若添加此值，在下载完成时，会校验此值
@@ -147,7 +147,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
             if (info.isPartialSupport && info.totalBytes != -1L) {
                 val threadNum = info.threadCounts
                 val blockSize = info.totalBytes / threadNum
-                info.blockSize = blockSize
+
                 //建立数组准备存储分块信息
                 info.splitStart = arrayOfNulls(threadNum)
                 info.splitEnd = arrayOfNulls(threadNum)
@@ -158,11 +158,11 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
                     info.splitEnd[i] = (i + 1) * blockSize - 1
                 }
                 //文件结尾
-                info.splitEnd[threadNum - 1] = info.totalBytes
+                info.splitEnd[threadNum - 1] = info.totalBytes - 1
             } else {
                 info.threadCounts = 1
                 info.isPartialSupport = false
-                info.blockSize = info.totalBytes
+
             }
         }
 
@@ -188,20 +188,23 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
 
 /**
  * 描述分块下载
+ * 比如分块大小是10,整个任务的大小是20，分两个线程下载
+ * 那么，分块1的下载范围是0-9,分块2是10-20
  */
 class PieceInfo @JvmOverloads constructor(
-    val id: UUID,
-    val blockId: Int = 0,
+    val id: UUID, //downloadInfo的uuid
+    val blockId: Int = 0,//分块编号
 
     var start: Long = -1,
     var end: Long = -1,
-    var curBytes: Long = 0,//当前分块已经下载了多少
-    var totalBytes: Long = -1,//此分块的完整大小
 
-    var finalCode: Int = StatusCode.STATUS_INIT,
-    var msg: String? = null,
-) {
+    ) {
 
+    var totalBytes: Long =  end - start + 1        //此分块的完整大小//初始化分块大小信息
+
+    var curBytes: Long = 0//当前分块已经下载了多少
+    var finalCode: Int = StatusCode.STATUS_INIT
+    var msg: String? = null
     var speed: Long = 0L
 
     fun startPlus(delta: Long) {

@@ -2,6 +2,7 @@ package com.kiylx.download_module.utils.java_log_pack;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Locale;
 import java.util.logging.Formatter;
@@ -15,15 +16,12 @@ import java.util.logging.LogRecord;
  */
 class MyLogFormatter extends Formatter {
 
-    // Create a DateFormat to format the logger timestamp.
-    private static final DateFormat df = new SimpleDateFormat("yyyy/MM/dd hh:mm:ss.SSS", Locale.CHINA);
-
     public String format(LogRecord record) {
         StringBuilder builder = new StringBuilder(1000);
-        builder.append(df.format(new Date(record.getMillis()))).append(" - ");
+        builder.append(LocalDateTime.now()).append(" - ");
         //下面两行打印调用日志打印的类名和方法名
-//        builder.append("[").append(record.getSourceClassName()).append(".");
-//        builder.append(record.getSourceMethodName()).append("] - \n");
+        builder.append("[").append(record.getSourceClassName()).append(".");
+        builder.append(record.getSourceMethodName()).append("] - \n");
         builder.append("\t[").append(record.getLevel()).append("] - ");
         builder.append(formatMessage(record));
         builder.append("\n\n");

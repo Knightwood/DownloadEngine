@@ -37,7 +37,7 @@ import static java.net.HttpURLConnection.*;
  * 下载之前的验证过程也会生成TaskResponse,如果验证的结果是下载失败，将使用TaskResponse生成TaskResult返回给TaskHandler。
  */
 public class DownloadTaskImpl extends DownloadTask {
-    protected final Logger logger= JavaLogUtil.setLoggerHandler();
+    protected final Logger logger = JavaLogUtil.setLoggerHandler();
 
     private List<PieceThreadImpl> pieceThreads = Collections.emptyList();
     private ExecutorService exec;
@@ -50,16 +50,13 @@ public class DownloadTaskImpl extends DownloadTask {
             info.getSplitStart()[blockId] = pieceInfo.getStart();
             info.getSplitEnd()[blockId] = pieceInfo.getEnd();
             info.setRunning(isRunning);
-            info.getCurrentBytes()[blockId] = pieceInfo.getCurBytes();//更新每个分块已下载的大小
-            //更新进度
-            updateToDb(pieceInfo);
+            //更新进度以及将下载信息保存到磁盘
+            calcSpeedAndSave();
         }
 
         @Override
         public FakeFile getFile() {
-            if (fakeFile == null)
-                fakeFile = Objects.requireNonNull(checkDiskAndInitFile()).getFirst();
-            return fakeFile;
+            return Objects.requireNonNull(checkDiskAndInitFile()).getFirst();
         }
 
         @Override
@@ -67,13 +64,6 @@ public class DownloadTaskImpl extends DownloadTask {
             return info;
         }
     };
-
-    private void updateToDb(PieceInfo pieceInfo) {
-        if (repo == null)
-            throw new NullPointerException("repo is null");
-        syncPieceInfo(pieceInfo, Repo.SyncAction.UPDATE);
-        calcProgress();
-    }
 
 
     public DownloadTaskImpl(@NonNull DownloadInfo info) {
@@ -88,23 +78,29 @@ public class DownloadTaskImpl extends DownloadTask {
     private long lastTime = 0L;//上次计算速度时的时间
 
     /**
-     * 计算速度
+     * 计算速度以及将信息同步到磁盘
      * 与上次时间间隔前相比，这个时间间隔下载了多少
      * 并更新到数据库
      */
-    public void calcProgress() {
+    public void calcSpeedAndSave() {
         long currentSize = 0L;
         long deltaTime = System.currentTimeMillis() - lastTime;
-        for (long j : info.getCurrentBytes()) {
-            currentSize += j;
+        for (PieceInfo pieceInfo:info.getPiecesList()) {
+            currentSize += pieceInfo.getCurBytes();
         }
         long deltaSize = currentSize - lastSize;
+        if (deltaTime>=300){
+            //每300ms同步存储
+            syncInfo(Repo.SyncAction.UPDATE);
+        }
+        //todo 这里一直不调用，难道是条件不对？？
         if (deltaTime >= INFO_MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
             long speed = deltaSize / deltaTime * 1000; // bytes/s
             lastTime = System.currentTimeMillis();
             lastSize = currentSize;
             info.setSpeed(speed);
-            syncInfo(Repo.SyncAction.UPDATE);
+            if (viewSources != null)
+                viewSources.notifyViewsChanged(info,Repo.SyncAction.UPDATE, getLifecycleCollection());
         }
     }
 
@@ -174,7 +170,7 @@ public class DownloadTaskImpl extends DownloadTask {
 
         boolean shouldQueryDb = (isRecoveryFromDisk() || info.getRetryCount() > 0);//旧任务或者尝试重新下载的任务
         //验证连接有效性
-        logger.info("调用fetchMetaData之前");
+        logger.info("调用fetchMetaData之前 以及 是否是旧任务" + shouldQueryDb);
         TaskResponse metaResult;
         metaResult = TaskDataReceive.fetchMetaData(info, shouldQueryDb);
         if (metaResult != null)
@@ -217,6 +213,7 @@ public class DownloadTaskImpl extends DownloadTask {
 
     /**
      * 根据所有分块线程下载的结果，返回下载任务的结论
+     *
      * @return 根据当前任务所处生命周期，返回任务结果
      */
     private TaskResponse parsePieceThreadResult(List<Future<PieceResult>> futureList) {
@@ -273,7 +270,6 @@ public class DownloadTaskImpl extends DownloadTask {
     }
 
     /**
-     *
      * @param canRunning 是否可以运行
      *                   false：不可另task继续运行，所以，设置停止标志并终止线程池
      *                   true：继续运行，进设置允许下载标志
@@ -303,7 +299,7 @@ public class DownloadTaskImpl extends DownloadTask {
             if (!enoughSpace)
                 return new Pair<>(null, genTaskResponse(STATUS_ERROR, "CAN NOT INIT FILE!", ERROR));
             FakeFile file = fs.create(info.getPath(), true);
-            if (file==null)
+            if (file == null)
                 return new Pair<>(null, genTaskResponse(STATUS_ERROR, "CAN NOT CREATE FILE!", ERROR));
             return new Pair<>(file, null);
         } else {
@@ -318,7 +314,7 @@ public class DownloadTaskImpl extends DownloadTask {
         if (pieceThreads != null) {
             pieceThreads.clear();
         }
-        viewSources=null;
+        viewSources = null;
     }
 
     /**
@@ -336,17 +332,8 @@ public class DownloadTaskImpl extends DownloadTask {
     public void syncInfo(Repo.SyncAction action) {
         if (repo != null)
             repo.syncInfoToDisk(info, action);
-        if (viewSources!=null)
-            viewSources.notifyViewsChanged(info,action,getLifecycleCollection());
-    }
-
-    /**
-     * @param info
-     * @param action {@link Repo.SyncAction}
-     */
-    private void syncPieceInfo(PieceInfo info, Repo.SyncAction action) {
-        if (repo != null) {
-            repo.syncPieceInfoToDisk(info, action);
+        else {
+            logger.info("存储库不可用");
         }
     }
 

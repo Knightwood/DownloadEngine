@@ -11,8 +11,10 @@ import static com.kiylx.download_module.model.StatusCode.*;
 
 public abstract class PieceThread implements Callable<PieceResult> {
     public static final int BUFFER_SIZE = 8192; //8kib
+
     /* 在进度条更新之前必须完成的最小进度量 */
     public static final int MIN_PROGRESS_STEP = 65536;//64kib
+
     /* 更新进度条之前必须经过的最短时间, 单位：ms */
     public static final long MIN_PROGRESS_TIME = 1500;
     public static final long INFO_MIN_PROGRESS_TIME = 800;
@@ -57,10 +59,12 @@ public abstract class PieceThread implements Callable<PieceResult> {
     }
 
     /**
-     * 将delta累加到分块的开始
+     * 1,将delta累加到分块的开始
+     * 因此，若想知道分块的起始位置，需要通过计算pieceInfo的start-curBytes或者 end-totalBytes
+     * 2,累加delta
      * @param delta 比起上次下载了多少数据
      */
-    public void startPlus(long delta) {
+    public void curBytesPlus(long delta) {
         pieceInfo.startPlus(delta);
         pieceInfo.curBytesPlus(delta);
     }
@@ -84,11 +88,7 @@ public abstract class PieceThread implements Callable<PieceResult> {
 
     //这个分块的大小
     public long getTotalBytes() {
-        return pieceInfo.getTotalBytes();
-    }
-
-    public void setTotalBytes(long totalBytes) {
-        pieceInfo.setTotalBytes(totalBytes);
+        return pieceInfo.getEnd()-(pieceInfo.getStart())- pieceInfo.getCurBytes()+1;
     }
 
     /**
