@@ -204,10 +204,9 @@ public class PieceThreadImpl extends PieceThread {
     //以时间间隔更新分块及及info信息
     private void updateProgress() {
         long deltaTime = System.currentTimeMillis() - currentTime;
-        long deltaSize = getCurBytes() - currentSize;
-
-        if (deltaTime >= MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
+        if (deltaTime >= MIN_PROGRESS_TIME) {
             currentTime = System.currentTimeMillis();
+            long deltaSize = getCurBytes() - currentSize;
             currentSize = getCurBytes();
 
             long speed = deltaSize / deltaTime * 1000; // bytes/s 分块的速度

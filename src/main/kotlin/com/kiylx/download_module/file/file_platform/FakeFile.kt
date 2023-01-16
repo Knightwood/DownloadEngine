@@ -1,11 +1,30 @@
 package com.kiylx.download_module.file.file_platform
 
 import com.kiylx.download_module.file.file_platform.system.SysCall
-import com.kiylx.download_module.interfaces.PieceThread.MIN_PROGRESS_STEP
-import com.kiylx.download_module.interfaces.PieceThread.MIN_PROGRESS_TIME
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
+
+/**
+ * 一些关于平台和读写方式的描述
+ */
+class Platform {
+    class OS{
+        companion object{
+            const val linux = 1
+            const val windows = 2
+            const val android = 3
+            const val other = 4
+        }
+    }
+    class RDWay{
+        companion object{
+            const val fdImpl = 5 //基于文件描述符
+            const val pathImpl = 6//基于Path类
+        }
+    }
+}
+
 
 /**
  * 对于不同平台，包含不同的文件使用方式。
@@ -29,12 +48,15 @@ sealed class FakeFile<T>(
     abstract fun close()
 
     companion object {
-        const val linux = 1
-        const val windows = 2
-        const val android = 3
-        const val other = 4
-        const val fdImpl = 5 //基于文件描述符
-        const val pathImpl = 6//基于Path类
+        const val linux = Platform.OS.linux
+        const val windows = Platform.OS.windows
+        const val android = Platform.OS.android
+        const val other = Platform.OS.other
+        const val fdImpl = Platform.RDWay.fdImpl //基于文件描述符
+        const val pathImpl = Platform.RDWay.pathImpl//基于Path类
+
+        const val MIN_PROGRESS_STEP = 65536 //64kib
+        const val MIN_PROGRESS_TIME: Long = 1500
     }
 }
 
@@ -100,8 +122,6 @@ class PathFile(val path: Path, platform: Int = linux) : FakeFile<Path>(path, pla
     override fun newOutputStream(): OutputStream = Files.newOutputStream(path)
 
     override fun newInputStream(): InputStream = Files.newInputStream(path)
-
-
 
 }
 

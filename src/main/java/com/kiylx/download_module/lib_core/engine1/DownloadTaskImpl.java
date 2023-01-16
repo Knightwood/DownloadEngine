@@ -6,28 +6,24 @@ import com.kiylx.download_module.interfaces.DownloadTask;
 import com.kiylx.download_module.interfaces.PieceThread;
 import com.kiylx.download_module.interfaces.Repo;
 import com.kiylx.download_module.model.*;
-import com.kiylx.download_module.network.TaskDataReceive;
 import com.kiylx.download_module.network.HttpUtils;
-
+import com.kiylx.download_module.network.TaskDataReceive;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
 import io.reactivex.annotations.NonNull;
 import kotlin.Pair;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
+import static com.kiylx.download_module.Context.updateViewInterval;
 import static com.kiylx.download_module.ContextKt.getContext;
-import static com.kiylx.download_module.interfaces.PieceThread.INFO_MIN_PROGRESS_TIME;
-import static com.kiylx.download_module.interfaces.PieceThread.MIN_PROGRESS_STEP;
 import static com.kiylx.download_module.model.StatusCode.*;
 import static com.kiylx.download_module.model.TaskResult.TaskResultCode.*;
-import static java.net.HttpURLConnection.*;
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
 /**
  * 下载执行过程
@@ -42,16 +38,15 @@ public class DownloadTaskImpl extends DownloadTask {
     private List<PieceThreadImpl> pieceThreads = Collections.emptyList();
     private ExecutorService exec;
     private final Repo repo = getContext().getRepo();
+    private Timer recordHandler = null;
+    private boolean exit = false;//任务执行结束时，为true，可根据此标志做一些清理工作
 
     public final TaskCallback callback = new TaskCallback() {
         @Override
         public void update(PieceInfo pieceInfo, boolean isRunning) throws NullPointerException {
-            int blockId = pieceInfo.getBlockId();
-            info.getSplitStart()[blockId] = pieceInfo.getStart();
-            info.getSplitEnd()[blockId] = pieceInfo.getEnd();
             info.setRunning(isRunning);
             //更新进度以及将下载信息保存到磁盘
-            calcSpeedAndSave();
+            //calcSpeedAndSave();
         }
 
         @Override
@@ -76,33 +71,6 @@ public class DownloadTaskImpl extends DownloadTask {
 
     private long lastSize = 0L;//上次计算速度时的文件大小
     private long lastTime = 0L;//上次计算速度时的时间
-
-    /**
-     * 计算速度以及将信息同步到磁盘
-     * 与上次时间间隔前相比，这个时间间隔下载了多少
-     * 并更新到数据库
-     */
-    public void calcSpeedAndSave() {
-        long currentSize = 0L;
-        long deltaTime = System.currentTimeMillis() - lastTime;
-        for (PieceInfo pieceInfo:info.getPiecesList()) {
-            currentSize += pieceInfo.getCurBytes();
-        }
-        long deltaSize = currentSize - lastSize;
-        if (deltaTime>=300){
-            //每300ms同步存储
-            syncInfo(Repo.SyncAction.UPDATE);
-        }
-        //todo 这里一直不调用，难道是条件不对？？
-        if (deltaTime >= INFO_MIN_PROGRESS_TIME && deltaSize >= MIN_PROGRESS_STEP) {
-            long speed = deltaSize / deltaTime * 1000; // bytes/s
-            lastTime = System.currentTimeMillis();
-            lastSize = currentSize;
-            info.setSpeed(speed);
-            if (viewSources != null)
-                viewSources.notifyViewsChanged(info,Repo.SyncAction.UPDATE, getLifecycleCollection());
-        }
-    }
 
     @Override
     protected DownloadTask initTask() {
@@ -197,6 +165,7 @@ public class DownloadTaskImpl extends DownloadTask {
             //Wait all threads
             logger.info("等待线程池下载完成");
             syncInfo(Repo.SyncAction.ADD);//此处信息初始化完成，开始执行下载。将信息存入数据库
+            timerUpdate();
             futureList = exec.invokeAll(pieceThreads);
         } catch (Exception e) {
             e.printStackTrace();
@@ -208,6 +177,49 @@ public class DownloadTaskImpl extends DownloadTask {
             DownloadInfo.modifyMsg(info, pieceThreadResult);//下载结果写入DownloadInfo
         }
         return pieceThreadResult;
+    }
+
+    /**
+     * 周期性的同步信息磁盘和更新下载进度
+     */
+    private void timerUpdate() {
+        if (recordHandler == null) {
+            recordHandler = new Timer();
+        }
+        recordHandler.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                if (!exit)
+                    calcSpeedAndSave();
+                else {
+                    cancel();
+                    recordHandler.cancel();
+                }
+            }
+        }, 1000L, updateViewInterval);
+    }
+
+    /**
+     * 计算速度以及将信息同步到磁盘
+     * 与上次时间间隔前相比，这个时间间隔下载了多少
+     * 并更新到数据库
+     */
+    public void calcSpeedAndSave() {
+        long currentSize = 0L;
+        for (PieceInfo pieceInfo : info.getPiecesList()) {
+            currentSize += pieceInfo.getCurBytes();
+        }
+        long deltaSize = currentSize - lastSize;
+//        long deltaTime = System.currentTimeMillis() - lastTime;
+        //同步存储
+        syncInfo(Repo.SyncAction.UPDATE);
+        long speed = deltaSize / updateViewInterval * 1000; // bytes/s
+        //lastTime = System.currentTimeMillis();
+        logger.info("速度（bytes/s）：  "+speed+"\n");
+        lastSize = currentSize;
+        info.setSpeed(speed);
+        if (viewSources != null)
+            viewSources.notifyViewsChanged(info, Repo.SyncAction.UPDATE, getLifecycleCollection());
     }
 
 
@@ -311,10 +323,12 @@ public class DownloadTaskImpl extends DownloadTask {
      * 线程之行结束的清理
      */
     private void closeThings() {
+        exit = true;
         if (pieceThreads != null) {
             pieceThreads.clear();
         }
         viewSources = null;
+        recordHandler.cancel();
     }
 
     /**

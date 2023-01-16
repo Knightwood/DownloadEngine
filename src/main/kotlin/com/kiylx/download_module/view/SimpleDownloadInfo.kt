@@ -25,7 +25,7 @@ data class SimpleDownloadInfo(
         print("uuid: $uuid \n" +
                 " 名称: $fileName \n" +
                 " 文件大小: $fileSize \n" +
-                " 速度: $speed \n" +
+                " 速度 bytes/s : $speed \n" +
                 "state：$state \n"+
                 "finalCode: $finalCode \n"+
                 "finalMsg: $finalMsg \n"+

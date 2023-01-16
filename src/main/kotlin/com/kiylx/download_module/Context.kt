@@ -59,7 +59,7 @@ class Context private constructor(configs: ContextConfigs) {
     }
 
     companion object {
-        const val updateViewInterval: Long = 2000L
+        const val updateViewInterval: Long = 1000L//更新下载进度时间间隔
         const val defaultUserAgent =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.106 Safari/537.36"
         const val defaultDownloadLimit = 3 //默认下载任务数量限制

@@ -34,8 +34,6 @@ import static com.kiylx.download_module.DownloadsListKind.*;
  * 每一个下载任务都是一个DownloadTask，
  * DownloadTask含有一到多个子任务（PieceThread）构成，以此实现多线程下载效果。
  * 每个下载都会将下载信息通过DownloadTaskImpl.syncInfo方法存储到数据库或是viewSources（向外界传递下载信息，例如下载速度）。
- *
- *
  */
 public class TaskHandler {
     private Logger logger= JavaLogUtil.setLoggerHandler();
