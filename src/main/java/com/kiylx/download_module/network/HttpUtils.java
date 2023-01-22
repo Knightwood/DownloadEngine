@@ -3,7 +3,7 @@ package com.kiylx.download_module.network;
 import com.kiylx.download_module.utils.MimeTypeUtils;
 import com.kiylx.download_module.utils.TextUtils;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
-import io.reactivex.annotations.NonNull;
+
 import org.mozilla.universalchardet.UniversalDetector;
 
 import java.io.ByteArrayOutputStream;
@@ -80,7 +80,7 @@ public class HttpUtils {
         return new String[]{fileName, mimeType, extension};
     }
 
-    public static String getHttpFileName(@NonNull String decodedUrl,
+    public static String getHttpFileName( String decodedUrl,
                                          String contentDisposition,
                                          String contentLocation,
                                          String mimeType) {
@@ -201,7 +201,7 @@ public class HttpUtils {
      * downloaded to the file system. We only support the attachment type
      */
 
-    private static String parseContentDisposition(@NonNull String contentDisposition) {
+    private static String parseContentDisposition( String contentDisposition) {
         try {
             Matcher m = CONTENT_DISPOSITION_PATTERN.matcher(contentDisposition);
             if (m.find()) {

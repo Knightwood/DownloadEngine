@@ -4,6 +4,7 @@ import com.kiylx.download_module.file.fileskit.FileKit
 import com.kiylx.download_module.file.fileskit.FileKitImpl
 import com.kiylx.download_module.file.file_platform.system.SysCall
 import com.kiylx.download_module.file.file_platform.system.SysCallImpl
+import com.kiylx.download_module.interfaces.ATaskHandler
 import com.kiylx.download_module.lib_core.engine1.TaskHandler
 import com.kiylx.download_module.interfaces.VerifyFactory
 import com.kiylx.download_module.model.VerifyFactoryImpl
@@ -50,7 +51,7 @@ class Context private constructor(configs: ContextConfigs) {
      * 外界将接口实现通过此方法注册到TaskHandler中。
      * 以此实现在下载完成后，外界自动处理下载文件，比如重命名文件并移动到某一个特定目录
      */
-    fun setDownloadFinishHandle(downloadFinishHandler: TaskHandler.HandleTaskInterface){
+    fun setDownloadFinishHandle(downloadFinishHandler: ATaskHandler.IBackHandler){
             taskHandler.registerHandle(downloadFinishHandler)
     }
 
@@ -78,7 +79,10 @@ class Context private constructor(configs: ContextConfigs) {
         }
     }
 
-
+    /**
+     * 通过改变下面字段以传入不同的接口实现提供不同的功能。
+     * 默认字段为null将使用默认接口实现。
+     */
     class ContextConfigs() {
         var repoClazz: Class<out Repo>? = null
         var fileKitClazz: Class<out FileKit<*>>? = null

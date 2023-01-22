@@ -9,7 +9,6 @@ import com.kiylx.download_module.model.*;
 import com.kiylx.download_module.network.HttpUtils;
 import com.kiylx.download_module.network.TaskDataReceive;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
-import io.reactivex.annotations.NonNull;
 import kotlin.Pair;
 
 import java.util.*;
@@ -61,7 +60,7 @@ public class DownloadTaskImpl extends DownloadTask {
     };
 
 
-    public DownloadTaskImpl(@NonNull DownloadInfo info) {
+    public DownloadTaskImpl(DownloadInfo info) {
         super(info);
     }
 

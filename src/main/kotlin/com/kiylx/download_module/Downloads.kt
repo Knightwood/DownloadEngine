@@ -1,5 +1,6 @@
 package com.kiylx.download_module
 
+import com.kiylx.download_module.interfaces.ATaskHandler
 import com.kiylx.download_module.lib_core.engine1.DownloadTaskImpl
 import com.kiylx.download_module.lib_core.engine1.TaskHandler
 import com.kiylx.download_module.interfaces.DownloadTask
@@ -11,7 +12,7 @@ import java.util.*
 class Downloads private constructor(configs: Context.ContextConfigs) {
     var mContext: Context
         private set
-    private var mTaskHandler: TaskHandler
+    private var mTaskHandler: ATaskHandler
 
     init {
         mContext = Context.getContextSingleton(configs)//确保最先初始化Context
@@ -33,16 +34,7 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
 
     fun pauseDownload(id: UUID) = mTaskHandler.requestPauseTask(id)
     fun resumeTask(id: UUID) = mTaskHandler.resumeTask(id)
-    fun cancelTask(id: UUID?) = mTaskHandler.requestCancelTask(id)
-
-    /**
-     * @param kind :DownloadsListKind中定义
-     * 返回taskhandler中的信息
-     */
-    @Deprecated("不该使用")
-    fun getDownloadsList(kind: Int): TasksCollection? {
-        return mTaskHandler.getDownloadTaskList(kind)
-    }
+    fun cancelTask(id: UUID) = mTaskHandler.requestCancelTask(id)
 
     /**
      * @param kind :DownloadsListKind中定义
@@ -87,6 +79,7 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
 
 class DownloadsListKind {
     companion object {
+        const val none=-1
         const val wait_kind = 0 //wait和frozen同属于wait队列
         const val active_kind = 1
         const val frozen_kind = 2

@@ -1,12 +1,14 @@
 package com.kiylx.download_module.interfaces;
 
+import com.kiylx.download_module.DownloadsListKind;
 import com.kiylx.download_module.file.file_platform.FakeFile;
 import com.kiylx.download_module.file.fileskit.FileKit;
 import com.kiylx.download_module.model.*;
 import com.kiylx.download_module.view.ViewSources;
-import io.reactivex.annotations.NonNull;
+
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
@@ -21,15 +23,19 @@ public abstract class DownloadTask implements Callable<TaskResult> {
     private LifecycleCollection lifecycleCollection;
     private boolean recoveryFromDisk = false;
 
-    public DownloadTask (){
-        this.info=null;
+    public DownloadTask() {
+        this.info = null;
     }
 
-    public DownloadTask(@NonNull DownloadInfo info) {
+    public DownloadTask(DownloadInfo info) {
         lifecycleCollection = new LifecycleCollection();
         this.info = info;
         getLifecycleCollection().initState(TaskLifecycle.OH, TaskLifecycle.OH);
         fs = getContext().getFileKit();
+    }
+
+    public UUID getTaskId() {
+        return info == null ? null : info.getUuid();
     }
 
     protected abstract DownloadTask initTask();
@@ -148,10 +154,13 @@ public abstract class DownloadTask implements Callable<TaskResult> {
     }
 
 
+    /**
+     * 下载任务的运行状态
+     */
     public static class LifecycleCollection {
         //指示downloadTask的状态，还会将状态写入downloadInfo存储，便于下载加载downloadInfo识别任务状态
-        final ThreadLocal<TaskLifecycle> oldState = new ThreadLocal<>();
-        final ThreadLocal<TaskLifecycle> nowState = new ThreadLocal<>();
+        final ThreadLocal<TaskLifecycle> oldState = new ThreadLocal<>();//上一个状态
+        final ThreadLocal<TaskLifecycle> nowState = new ThreadLocal<>();//当前状态
 
         public LifecycleCollection() {
             this.oldState.set(TaskLifecycle.OH);

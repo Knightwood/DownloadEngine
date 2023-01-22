@@ -20,8 +20,6 @@
 
 package com.kiylx.download_module.utils;
 
-import io.reactivex.annotations.NonNull;
-
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
@@ -40,7 +38,7 @@ public class DigestUtils
     private static final String SHA256_PATTERN = "[A-Fa-f0-9]{64}";
     private static final int STREAM_BUFFER_LENGTH = 1024;
 
-    public static String makeSha256Hash(@NonNull FileInputStream is)
+    public static String makeSha256Hash( FileInputStream is)
     {
         try (BufferedInputStream bufIs = new BufferedInputStream(is)) {
             return makeHash("SHA-256", bufIs);
@@ -49,7 +47,7 @@ public class DigestUtils
         }
     }
 
-    public static String makeMd5Hash(@NonNull FileInputStream is)
+    public static String makeMd5Hash( FileInputStream is)
     {
         try (BufferedInputStream bufIs = new BufferedInputStream(is)) {
             return makeHash("MD5", bufIs);
@@ -58,7 +56,7 @@ public class DigestUtils
         }
     }
 
-    public static String makeSha256Hash(@NonNull byte[] bytes)
+    public static String makeSha256Hash( byte[] bytes)
     {
         try (ByteArrayInputStream is = new ByteArrayInputStream(bytes)) {
             return makeHash("SHA-256", is);
@@ -67,7 +65,7 @@ public class DigestUtils
         }
     }
 
-    public static String makeMd5Hash(@NonNull byte[] bytes)
+    public static String makeMd5Hash( byte[] bytes)
     {
         try (ByteArrayInputStream is = new ByteArrayInputStream(bytes)) {
             return makeHash("MD5", is);
@@ -113,12 +111,12 @@ public class DigestUtils
         return sha1.toString();
     }
 
-    public static boolean isMd5Hash(@NonNull String hash)
+    public static boolean isMd5Hash( String hash)
     {
         return Pattern.compile(MD5_PATTERN).matcher(hash).matches();
     }
 
-    public static boolean isSha256Hash(@NonNull String hash)
+    public static boolean isSha256Hash( String hash)
     {
         return Pattern.compile(SHA256_PATTERN).matcher(hash).matches();
     }

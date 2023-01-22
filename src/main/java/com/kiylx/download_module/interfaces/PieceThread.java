@@ -2,7 +2,7 @@ package com.kiylx.download_module.interfaces;
 
 import com.kiylx.download_module.model.PieceInfo;
 import com.kiylx.download_module.model.PieceResult;
-import io.reactivex.annotations.NonNull;
+
 
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -27,7 +27,7 @@ public abstract class PieceThread implements Callable<PieceResult> {
     protected PieceResult pieceResult;
 
     protected Long currentTimeMillis= System.currentTimeMillis();
-    public PieceThread(@NonNull PieceInfo pieceInfo) {
+    public PieceThread( PieceInfo pieceInfo) {
         this.pieceInfo = pieceInfo;
         this.infoId = pieceInfo.getId();
         this.blockId = pieceInfo.getBlockId();

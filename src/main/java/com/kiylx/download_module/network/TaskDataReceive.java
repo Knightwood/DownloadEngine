@@ -9,7 +9,7 @@ import com.kiylx.download_module.interfaces.ConnectionListener;
 import com.kiylx.download_module.utils.DateUtils;
 import com.kiylx.download_module.utils.TextUtils;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
-import io.reactivex.annotations.NonNull;
+
 import io.reactivex.annotations.Nullable;
 import okhttp3.MediaType;
 import okhttp3.Request;
@@ -222,7 +222,7 @@ public class TaskDataReceive implements RemoteRepo {
         return null;
     }
 
-    public static void parseUnavailableHeaders(DownloadInfo info, @NonNull Response response) {
+    public static void parseUnavailableHeaders(DownloadInfo info,  Response response) {
         String header = response.header("Retry-After", "-1");
         long retryAfter = Long.parseLong(header);
 

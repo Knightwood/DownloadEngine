@@ -1,7 +1,7 @@
 package com.kiylx.download_module.file.fileskit;
 
 import com.kiylx.download_module.file.file_platform.FakeFile;
-import io.reactivex.annotations.NonNull;
+
 
 import java.io.*;
 
@@ -79,7 +79,7 @@ public interface FileKit<T> {
 
     String getExtension(FakeFile<T> file);
 
-    void allocate(@NonNull FileDescriptor fd, long length) throws IOException;
+    void allocate( FileDescriptor fd, long length) throws IOException;
 
     void closeQuietly(Closeable closeable);
 

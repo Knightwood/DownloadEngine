@@ -19,7 +19,7 @@ dependencies {
 
     implementation ("com.squareup.okhttp3:okhttp:4.9.3")
     //implementation 'com.google.code.gson:gson:2.8.6'
-    implementation ("io.reactivex.rxjava2:rxjava:2.2.19")
+    //implementation ("io.reactivex.rxjava2:rxjava:2.2.19")
     //字符编码识别
     implementation ("com.github.albfernandez:juniversalchardet:2.4.0")
 

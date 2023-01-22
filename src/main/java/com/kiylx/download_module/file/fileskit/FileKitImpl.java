@@ -4,7 +4,7 @@ import com.kiylx.download_module.file.file_platform.FakeFile;
 import com.kiylx.download_module.file.file_platform.PathFile;
 import com.kiylx.download_module.file.file_platform.system.SysCall;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
-import io.reactivex.annotations.NonNull;
+
 
 import java.io.*;
 import java.nio.file.*;
@@ -169,7 +169,7 @@ public class FileKitImpl implements FileKit<Path> {
      * See http://man7.org/linux/man-pages/man3/posix_fallocate.3.html
      */
     @Override
-    public void allocate(@NonNull FileDescriptor fd, long length) throws IOException {
+    public void allocate( FileDescriptor fd, long length) throws IOException {
         if (sysCall != null)
             sysCall.fallocate(fd, length);
     }

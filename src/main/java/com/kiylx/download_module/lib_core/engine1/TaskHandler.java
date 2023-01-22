@@ -1,6 +1,7 @@
 package com.kiylx.download_module.lib_core.engine1;
 
 import com.kiylx.download_module.DownloadsListKind;
+import com.kiylx.download_module.interfaces.ATaskHandler;
 import com.kiylx.download_module.lib_core.data_struct.DownloadMap;
 import com.kiylx.download_module.lib_core.data_struct.Empty;
 import com.kiylx.download_module.lib_core.data_struct.WaitingDownloadQueue;
@@ -11,15 +12,10 @@ import com.kiylx.download_module.model.DownloadInfo;
 import com.kiylx.download_module.model.StatusCode;
 import com.kiylx.download_module.model.TaskLifecycle;
 import com.kiylx.download_module.model.TaskResult;
-import com.kiylx.download_module.utils.DigestUtils;
+import com.kiylx.download_module.taskhandler.ListKind;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
-import com.kiylx.download_module.view.ViewSources;
+import org.jetbrains.annotations.NotNull;
 
-import io.reactivex.disposables.CompositeDisposable;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -35,43 +31,16 @@ import static com.kiylx.download_module.DownloadsListKind.*;
  * DownloadTask含有一到多个子任务（PieceThread）构成，以此实现多线程下载效果。
  * 每个下载都会将下载信息通过DownloadTaskImpl.syncInfo方法存储到数据库或是viewSources（向外界传递下载信息，例如下载速度）。
  */
-public class TaskHandler {
+public class TaskHandler extends ATaskHandler {
     private Logger logger= JavaLogUtil.setLoggerHandler();
     private int downloadLimit;
     private final DownloadMap active = new DownloadMap();
     private final WaitingDownloadQueue wait = new WaitingDownloadQueue();
     private final DownloadMap finish = new DownloadMap();
-    private final CompositeDisposable disposables = new CompositeDisposable();
+//    private final CompositeDisposable disposables = new CompositeDisposable();
     // ExecutorService executorService=new ThreadPoolExecutor(downloadLimit,2*downloadLimit,1000L,TimeUnit.SECONDS, new ArrayBlockingQueue<>(2 * downloadLimit));
     private ExecutorService executorService;
 
-    //外界把接口实现注册到这里，以此实现在下载完成后，另外界自动处理后续操作，比如重命名文件并移动到某一个特定目录
-    private HandleTaskInterface handleTaskInterface;
-    private ViewSources viewSources;
-
-    public void registerViewSources(ViewSources viewSources) {
-        if (this.viewSources == null)
-            this.viewSources = viewSources;
-    }
-
-    public void unRegisterViewSources(ViewSources viewSources) {
-        //移除接口
-        this.viewSources = null;
-    }
-
-    public void registerHandle(HandleTaskInterface taskHandler) {
-        if (handleTaskInterface == null)
-            handleTaskInterface = taskHandler;
-    }
-
-    public void unRegisterHandle(HandleTaskInterface taskHandler) {
-        //移除接口
-        handleTaskInterface = null;
-    }
-
-    public interface HandleTaskInterface {
-        void handle(DownloadInfo info);
-    }
 
     enum SingletonEnum {
         SINGLETON;
@@ -116,9 +85,10 @@ public class TaskHandler {
      * @return 顺利放入active, 返回true ；
      * 任务需要继续等待，放入wait并返回false ；
      */
+    @Override
     public boolean addDownloadTask(DownloadTask task) {
         boolean b = false;
-        task.viewSources=this.viewSources;//将viewSources赋给下载任务，使下载任务能够向外界传递自己的进度信息
+        task.viewSources=getViewSources();//将viewSources赋给下载任务，使下载任务能够向外界传递自己的进度信息
         if (isMaxActiveDownloads()) {
             System.out.println("队列满了，等待下载");
             wait.add(task);
@@ -136,8 +106,10 @@ public class TaskHandler {
      * 重试,任务在finish中移到wait重新下载
      *
      * @param id uuid
+     * @param kind
      */
-    public void reTry(UUID id) {
+    @Override
+    public void reTry(@NotNull UUID id, @NotNull ListKind kind) {
         DownloadTask task = finish.findTask(id);
         reTry(task);
     }
@@ -171,6 +143,7 @@ public class TaskHandler {
      * 界面的刷新滞后于下载任务实际完成的时间
      * 暂停下载任务
      */
+    @Override
     public void requestPauseTask(UUID id) {
         DownloadTask task;
         task = active.findTask(id);
@@ -188,7 +161,8 @@ public class TaskHandler {
      * 界面的刷新滞后于下载任务实际完成的时间
      * 取消下载任务
      */
-    public void requestCancelTask(UUID id) {
+    @Override
+    public void requestCancelTask(UUID id,ListKind kind) {
         DownloadTask task;
         task = active.findTask(id);
         if (task != null) {
@@ -208,6 +182,7 @@ public class TaskHandler {
      *
      * @param id downloadInfo's uuid
      */
+    @Override
     public void resumeTask(UUID id) {
         DownloadTask task;
         task = wait.frozenTask.findTaskInFrozen(id);
@@ -268,7 +243,7 @@ public class TaskHandler {
     }
 
     public void close() {
-        disposables.clear();
+//        disposables.clear();
     }
 
     /**
@@ -386,9 +361,9 @@ public class TaskHandler {
                 break;
         }
         task.syncInfo(Repo.SyncAction.UPDATE);
-        if (handleTaskInterface != null) {
+        if (getIBackHandler() != null) {
             //后处理，比如交给app重命名或是移动文件等
-            handleTaskInterface.handle(info);
+            getIBackHandler().handle(info);
         }
     }
 
@@ -412,41 +387,4 @@ public class TaskHandler {
         }
     }
 
-    /**
-     * 验证完整性
-     */
-    private boolean verifyChecksum(DownloadTask task) {
-        DownloadInfo info = task.getInfo();
-        String hash = info.getCheckSum();
-        if (hash != null && !hash.isEmpty()) {
-            //todo 校验文件 sha256 md5
-            try {
-                if (DigestUtils.isMd5Hash(info.getCheckSum())) {
-                    hash = calcHashSum(info, false);
-
-                } else if (DigestUtils.isSha256Hash(info.getCheckSum())) {
-                    hash = calcHashSum(info, true);
-
-                } else {
-                    throw new IllegalArgumentException("Unknown checksum type:" + info.getCheckSum());
-                }
-
-            } catch (IOException e) {
-                return false;
-            }
-
-            return (hash != null && hash.equalsIgnoreCase(info.getCheckSum()));
-        }
-        return false;
-    }
-
-    private String calcHashSum(DownloadInfo info, boolean sha256Hash) throws IOException {
-        File file = new File(info.getPath() + info.getFileName());
-        if (!file.exists())
-            return null;
-        try (FileInputStream is = new FileInputStream(file)) {
-            return (sha256Hash ? DigestUtils.makeSha256Hash(is) : DigestUtils.makeMd5Hash(is));
-        }
-
-    }
 }

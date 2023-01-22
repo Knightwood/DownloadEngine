@@ -8,7 +8,6 @@ import com.kiylx.download_module.interfaces.Repo;
 import com.kiylx.download_module.model.*;
 import com.kiylx.download_module.network.PieceDataReceive;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
-import io.reactivex.annotations.NonNull;
 import okhttp3.Response;
 
 import java.io.IOException;
@@ -93,7 +92,7 @@ public class PieceThreadImpl extends PieceThread {
         this(callback, new PieceInfo(id, blockId, start, end));
     }
 
-    public PieceThreadImpl(DownloadTask.TaskCallback callback, @NonNull PieceInfo pieceInfo) {
+    public PieceThreadImpl(DownloadTask.TaskCallback callback, PieceInfo pieceInfo) {
         super(pieceInfo);
         this.callback = callback;
         isRunning = true;//Very important 。 After investigating the bug for a long time, I finally found that it was because this value was not set here。fuck！！！
