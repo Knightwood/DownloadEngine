@@ -3,12 +3,16 @@ package com.kiylx.download_module.taskhandler
 import com.kiylx.download_module.getContext
 import com.kiylx.download_module.interfaces.DownloadTask
 import com.kiylx.download_module.taskhandler.ListKind.*
+import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil
 import java.util.*
+import kotlin.NoSuchElementException
 
 /**
  * 存储下载任务（downloadTask），被DownloadTaskHandler所使用，并提供改变他们位置和状态的方法
  */
 class TaskList {
+    private val logger = JavaLogUtil.setLoggerHandler()
+
     //同时下载任务限制
     var downloadLimit = getContext().limit
 
@@ -35,21 +39,34 @@ class TaskList {
     }
 
     /**
-     * 返回等待下载的任务数量
+     * 返回正在等待下载的任务数量
      */
     fun waitKindSize(): Int {
-        val num=active.size - downloadLimit
+        val num = active.size - downloadLimit
         return if (num <= 0) 0 else num
+    }
+    /**
+     * 返回（没有从队列中移除）第一个正在等待下载的任务的包装
+     * 若没有等待下载的任务，返回null
+     */
+    fun firstWaitingTaskWrapper(): DownloadTaskWrapper? {
+        val taskWrapper: DownloadTaskWrapper?
+        try {
+            taskWrapper = active.asIterable().first {
+                it.value.listKind == WaitKind
+            }.value
+        } catch (e: NoSuchElementException) {
+            logger.severe("没有正在等待下载的任务")
+            return null
+        }
+        return taskWrapper
     }
 
     /**
-     * 获取active队列中，pos位置处的任务
+     * 返回（没有从队列中移除）第一个正在等待下载的任务
+     * 若没有等待下载的任务，返回null
      */
-    fun changeTaskKind(pos:Int){
-        if (pos<0 || pos>active.size)
-            return
-        return
-    }
+    fun firstWaitingTask(): DownloadTask? = firstWaitingTaskWrapper()?.task
 
     /**
      * 添加到特定TaskList
@@ -95,6 +112,27 @@ class TaskList {
     }
 
     /**
+     * 随机从kind队列中选一个移除并返回
+     * 如果队列中没有，则返回null
+     */
+    fun remove(kind: ListKind): DownloadTaskWrapper? {
+        return when (kind) {
+            None, Stopped -> {
+                paused.remove(paused.keys.first())
+            }
+            ActiveKind -> {
+                active.remove(active.keys.first())
+            }
+            WaitKind -> {
+                active.remove(firstWaitingTask()?.taskId)
+            }
+            SucceedKind, ErrorKind -> {
+                finished.remove(finished.keys.first())
+            }
+        }
+    }
+
+    /**
      * 添加到特定TaskList
      */
     fun find(taskId: UUID, kind: ListKind = ActiveKind): DownloadTask? = when (kind) {
@@ -113,6 +151,22 @@ class TaskList {
         remove(taskId, oldKind)?.let {
             add(it.task, newKind)
         }
+    }
+
+    /**
+     * 随机从oldKind队列中选一个移动到newKind队列，并调用block
+     */
+    fun move(oldKind: ListKind = ActiveKind, newKind: ListKind, block: ((task: DownloadTask) -> Unit)?) {
+        try {
+            remove(oldKind)?.let {
+                add(it.task, newKind)
+                if (block != null)
+                    block(it.task)
+            }
+        } catch (e: NoSuchElementException) {
+            logger.severe("队列中没有任何元素")
+        }
+
     }
 }
 

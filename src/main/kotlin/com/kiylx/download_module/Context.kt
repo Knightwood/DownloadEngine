@@ -5,12 +5,12 @@ import com.kiylx.download_module.file.fileskit.FileKitImpl
 import com.kiylx.download_module.file.file_platform.system.SysCall
 import com.kiylx.download_module.file.file_platform.system.SysCallImpl
 import com.kiylx.download_module.interfaces.ATaskHandler
-import com.kiylx.download_module.lib_core.engine1.TaskHandler
 import com.kiylx.download_module.interfaces.VerifyFactory
 import com.kiylx.download_module.model.VerifyFactoryImpl
 import com.kiylx.download_module.interfaces.Repo
 import com.kiylx.download_module.network.HttpManager
 import com.kiylx.download_module.lib_core.repository.RepoImpl
+import com.kiylx.download_module.taskhandler.DownloadTaskHandler
 import com.kiylx.download_module.utils.CDelegate
 import com.kiylx.download_module.view.ViewSources
 
@@ -42,8 +42,9 @@ class Context private constructor(configs: ContextConfigs) {
     val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz,
         ::FileKitImpl
     )
-
-    val taskHandler: TaskHandler by lazy { TaskHandler.getInstance(limit) }
+//不要提前初始化！！！
+//    val taskHandler: TaskHandler by lazy { TaskHandler.getInstance(limit) }
+    val taskHandler: ATaskHandler by lazy { DownloadTaskHandler.instance }
     val verifyFactory: VerifyFactory by lazy { VerifyFactoryImpl() }
     val httpManager: HttpManager by lazy { HttpManager.getInstance() }
 

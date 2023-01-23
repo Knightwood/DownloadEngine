@@ -67,6 +67,7 @@ object TextUtils {
         }
     }
 
+}
 fun main() {
     print(convertSpeed(100) + "\n")
     print(convertSpeed(1024) + "\n")

@@ -100,10 +100,10 @@ public class PieceThreadImpl extends PieceThread {
 
     @Override
     public PieceResult call() {
-        if (pieceInfo.getFinalCode() == StatusCode.STATUS_SUCCESS || pieceInfo.getTotalBytes() == 0)
-            return generatePieceResult(pieceCode.success, "SUCCESS");
-        pieceInfo.clean();
-        pieceInfo.setFinalCode(StatusCode.STATUS_ACTIVE);
+        if (getPieceInfo().getFinalCode() == StatusCode.STATUS_SUCCESS || getPieceInfo().getTotalBytes() == 0)
+            return generatePieceResult(PieceCode.success, "SUCCESS");
+        getPieceInfo().clean();
+        getPieceInfo().setFinalCode(StatusCode.STATUS_ACTIVE);
         //下面开始传输数据
         rf = callback.getFile();
         rf.seek(getStart());
@@ -128,7 +128,7 @@ public class PieceThreadImpl extends PieceThread {
             try {
                 long contentLength = Long.parseLong(response.header("Content-Length"));
                 if (contentLength != -1) {//得到长度信息，赋值
-                    pieceInfo.setTotalBytes(contentLength);
+                    getPieceInfo().setTotalBytes(contentLength);
                 } else {//没有获得长度信息，报错
                     generatePieceResult(STATUS_CANNOT_RESUME,
                             "Can't know size of download, giving up");
@@ -174,7 +174,7 @@ public class PieceThreadImpl extends PieceThread {
                 if ((!isRunning) && len != -1) {
                     logger.info("暂停");
                     //暂停
-                    generatePieceResult(pieceCode.stop, "Stop");
+                    generatePieceResult(PieceCode.stop, "Stop");
                 } else {
                     logger.info("完成下载");
                     //完成无误； 如果已知，则验证长度
@@ -183,15 +183,15 @@ public class PieceThreadImpl extends PieceThread {
                                 "Piece length mismatch; found "
                                         + getCurBytes() + " instead of " + (getEnd() + 1));
                     }//分块下载成功
-                    generatePieceResult(pieceCode.success, "SUCCESS");
+                    generatePieceResult(PieceCode.success, "SUCCESS");
                 }
 
             } catch (Throwable e) {
                 e.printStackTrace();
-                generatePieceResult(pieceCode.error, "some thing wrong", e);
+                generatePieceResult(PieceCode.error, "some thing wrong", e);
             } finally {
                 if (callback != null)
-                    callback.update(pieceInfo, isRunning);
+                    callback.update(getPieceInfo(), isRunning);
                 closeThings(response);
             }
         }
@@ -209,10 +209,10 @@ public class PieceThreadImpl extends PieceThread {
             currentSize = getCurBytes();
 
             long speed = deltaSize / deltaTime * 1000; // bytes/s 分块的速度
-            pieceInfo.setSpeed(speed);
+            getPieceInfo().setSpeed(speed);
         }
         if (callback != null)
-            callback.update(pieceInfo, isRunning);
+            callback.update(getPieceInfo(), isRunning);
     }
     /**
      * 线程之行结束的清理
@@ -269,13 +269,13 @@ public class PieceThreadImpl extends PieceThread {
             PieceInfo pieceInfo =new PieceInfo(downloadInfo.getUuid(), 0, 0, downloadInfo.getTotalBytes());
             PieceThreadImpl thread = new PieceThreadImpl(callback, pieceInfo);
             result.add(thread);
-            pieceInfos.add(thread.pieceInfo);
+            pieceInfos.add(thread.getPieceInfo());
         } else {
             for (int i = 0; i < downloadInfo.getThreadCounts(); i++) {
                 PieceInfo pieceInfo =new PieceInfo(downloadInfo.getUuid(), i, downloadInfo.getSplitStart()[i], downloadInfo.getSplitEnd()[i]);
                 PieceThreadImpl thread = new PieceThreadImpl(callback, pieceInfo);
                 result.add(thread);
-                pieceInfos.add(thread.pieceInfo);
+                pieceInfos.add(thread.getPieceInfo());
             }
         }
         downloadInfo.getPiecesList().clear();

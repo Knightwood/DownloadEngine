@@ -10,11 +10,11 @@ import com.kiylx.download_module.utils.DateUtils;
 import com.kiylx.download_module.utils.TextUtils;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
 
-import io.reactivex.annotations.Nullable;
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;

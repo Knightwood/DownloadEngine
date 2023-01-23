@@ -22,7 +22,7 @@ class DownloadTaskHandler private constructor() : ATaskHandler() {
     private val executorService: ExecutorService? = Executors.newFixedThreadPool(config.downloadLimit * 2)
 
     companion object {
-        val downloadTaskHandler: DownloadTaskHandler
+        val instance: DownloadTaskHandler
                 by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) {
                     DownloadTaskHandler()
                 }
@@ -85,8 +85,18 @@ class DownloadTaskHandler private constructor() : ATaskHandler() {
      *                     传入task： 直接运行task
      */
     private fun scheduleDownload(task: DownloadTask? = null) {
-        if (taskList.waitKindSize()>0){
-
+        taskList.run {
+            if (waitKindSize() > 0) {
+                //让等待下载的任务开始下载
+                firstWaitingTaskWrapper()?.let {
+                    it.listKind = ListKind.ActiveKind
+                    runTask(it.task)
+                }
+            } else {
+                move(ListKind.Stopped, ListKind.ActiveKind) {
+                    runTask(it)
+                }
+            }
         }
     }
 

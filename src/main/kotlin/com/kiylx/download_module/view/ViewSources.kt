@@ -4,6 +4,7 @@ import com.kiylx.download_module.interfaces.DownloadTask
 import com.kiylx.download_module.interfaces.Repo
 import com.kiylx.download_module.interfaces.Repo.SyncAction.*
 import com.kiylx.download_module.model.DownloadInfo
+import com.kiylx.download_module.model.MoveStatus
 import com.kiylx.download_module.model.TaskLifecycle
 import com.kiylx.download_module.model.TaskLifecycle.*
 
