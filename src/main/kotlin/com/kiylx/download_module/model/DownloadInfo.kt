@@ -1,18 +1,21 @@
 package com.kiylx.download_module.model
 
 import com.kiylx.download_module.getContext
+import com.kiylx.download_module.model.serializable.UUIDSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.util.*
 
-data class DownloadInfo(var url: String, var fileFolder: String, var fileName: String = "") {
+@Serializable
+data class DownloadInfo(
+    var url: String,
+    var fileFolder: String,
+    var fileName: String = "",//标识唯一信息
+    @Serializable(with = UUIDSerializer::class)
+    var uuid: UUID
+) {
     var path: String = ""//文件路径
-    var uuid: UUID? = null
-        //标识唯一信息
-        get() {
-            if (field == null) {
-                field = UUID.randomUUID()
-            }
-            return field
-        }
     var mimeType: String? = null
     var extension: String = "unknow"//文件的扩展名
 
@@ -181,7 +184,9 @@ fun DownloadInfo.fixThreadNumBySize() {
  * 比如分块大小是10,整个任务的大小是20，分两个线程下载
  * 那么，分块1的下载范围是0-9,分块2是10-20
  */
+@Serializable
 data class PieceInfo @JvmOverloads constructor(
+    @Serializable(with = UUIDSerializer::class)
     val id: UUID, //downloadInfo的uuid
     val blockId: Int = 0,//分块编号
 
@@ -219,4 +224,9 @@ class CheckSumType {
         const val sha1 = 1
         const val sha256 = 2
     }
+}
+
+fun main(){
+    val info=DownloadInfo("fff","ggg","namesss",UUID.randomUUID())
+    print(Json.encodeToString(info))
 }

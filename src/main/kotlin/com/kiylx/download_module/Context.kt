@@ -60,6 +60,11 @@ class Context private constructor(configs: ContextConfigs) {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.106 Safari/537.36"
         const val defaultDownloadLimit = 3 //默认下载任务数量限制
         const val defaultDownloadThreadNum = 8 //默认下载线程数
+        const val configFileName="config.txt"
+        /**
+         * 序列化文件名的后缀。
+         */
+        const val sessionFileExt=".session"
 
         var singleton: Context? = null
         fun getContextSingleton(configs: ContextConfigs): Context {
@@ -89,6 +94,8 @@ class Context private constructor(configs: ContextConfigs) {
         var minSizeUseMultiThread: Int = 10485760 //达到10Mb时可以使用多线程下载
         var maxDownloadThreadNum: Int = 64 //一个下载任务的最大下载线程（分块）数量
         var autoRunStopTask = false//true：某个下载任务完成后，是否自动运行处于暂停状态的任务
+        var sessionFilePath=""//downloadinfo序列化后的存储文件夹位置
+        var configFilePath=""//配置文件存储位置
     }
 
 }

@@ -25,7 +25,7 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
         threadNum: Int = 0,
         backProcess: ATaskHandler.IBackHandler? = null
     ): DownloadInfo {
-        val info = DownloadInfo(url, path, fileName).apply {
+        val info = DownloadInfo(url, path, fileName,UUID.randomUUID()).apply {
             totalBytes = totalSize
             threadCounts = threadNum
         }
