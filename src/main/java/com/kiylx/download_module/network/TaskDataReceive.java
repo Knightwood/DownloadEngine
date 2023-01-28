@@ -1,15 +1,16 @@
 package com.kiylx.download_module.network;
 
 import com.kiylx.download_module.file.fileskit.FileKit;
+import com.kiylx.download_module.interfaces.ConnectionListener;
 import com.kiylx.download_module.interfaces.RemoteRepo;
 import com.kiylx.download_module.interfaces.Repo;
 import com.kiylx.download_module.model.DownloadInfo;
+import com.kiylx.download_module.model.DownloadInfoKt;
 import com.kiylx.download_module.model.TaskResponse;
-import com.kiylx.download_module.interfaces.ConnectionListener;
+import com.kiylx.download_module.model.TaskResult;
 import com.kiylx.download_module.utils.DateUtils;
 import com.kiylx.download_module.utils.TextUtils;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
-
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -60,14 +61,14 @@ public class TaskDataReceive implements RemoteRepo {
                             break;
                         case HTTP_PRECON_FAILED:
                             result[0] = new TaskResponse(STATUS_CANNOT_RESUME,
-                                    "Precondition failed", null);
+                                    "Precondition failed", TaskResult.TaskResultCode.ERROR);
                             break;
                         case HTTP_UNAVAILABLE:
                             parseUnavailableHeaders(info, response);
-                            result[0] = new TaskResponse(HTTP_UNAVAILABLE, message, null);
+                            result[0] = new TaskResponse(HTTP_UNAVAILABLE, message, TaskResult.TaskResultCode.ERROR);
                             break;
                         case HTTP_INTERNAL_ERROR:
-                            result[0] = new TaskResponse(HTTP_INTERNAL_ERROR, message, null);
+                            result[0] = new TaskResponse(HTTP_INTERNAL_ERROR, message, TaskResult.TaskResultCode.ERROR);
                             break;
                         default:
                             result[0] = getUnhandledHttpError(code, message);
@@ -149,13 +150,15 @@ public class TaskDataReceive implements RemoteRepo {
         意思是：这是一个 PNG 图像。 请显示它，除非您不知道如何显示 PNG 图像。 否则，或者如果用户选择保存它，我们建议您将其保存为的文件名称为picture.png*/
         logger.info("解析headers");
         ResponseBody body = response.body();
+        if (body == null) {
+            return new TaskResponse(STATUS_BAD_REQUEST,
+                    "Request failed", TaskResult.TaskResultCode.ERROR);
+        }
         Repo repo = getContext().getRepo();
         MediaType mimetype = null;
         String fileName = null;
         String ext = null;
-        if (body != null) {
-            mimetype = body.contentType();
-        }
+        mimetype = body.contentType();
         String[] mimeAndExtGuess;
         {
             //解析mimetype,文件名称，文件后缀
@@ -186,7 +189,7 @@ public class TaskDataReceive implements RemoteRepo {
                 fileName = LocalDateTime.now() + fileName;
             }
         } else {
-            fileName=info.getFileName() + EXTENSION_SEPARATOR + ext;
+            fileName = info.getFileName() + EXTENSION_SEPARATOR + ext;
             String tmpPath = info.getFileFolder() + File.separator + fileName;
             boolean isExist = kit.isExist(tmpPath, FileKit.FileKind.file);
             if (isExist) {
@@ -200,14 +203,16 @@ public class TaskDataReceive implements RemoteRepo {
 
         final String transferEncoding = response.header("Transfer-Encoding");
         if (transferEncoding == null) {
-            info.setTotalBytes(body.contentLength());
+            if (info.getTotalBytes() < 0L)
+                info.setTotalBytes(body.contentLength());
         } else {
-            info.setTotalBytes(-1);//长度未知
+            if (info.getTotalBytes() < 0L)
+                info.setTotalBytes(-1L);//长度未知
         }
 
         boolean partialSupport = "bytes".equalsIgnoreCase(response.header("Accept-Ranges"));
         info.setPartialSupport(partialSupport);//是否支持断点请求
-        info.setThreadCounts(partialSupport ? getContext().getDefaultThreadNum() : 1);
+        DownloadInfoKt.fixThreadNumBySize(info);//修正线程数量支持
         String eTagValue = response.header("ETag");
         repo.updateHeader(info.getUuid(), "ETag", eTagValue);
 
@@ -222,7 +227,7 @@ public class TaskDataReceive implements RemoteRepo {
         return null;
     }
 
-    public static void parseUnavailableHeaders(DownloadInfo info,  Response response) {
+    public static void parseUnavailableHeaders(DownloadInfo info, Response response) {
         String header = response.header("Retry-After", "-1");
         long retryAfter = Long.parseLong(header);
 

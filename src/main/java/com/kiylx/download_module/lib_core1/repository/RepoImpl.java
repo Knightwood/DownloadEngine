@@ -1,16 +1,20 @@
-package com.kiylx.download_module.lib_core.repository;
+package com.kiylx.download_module.lib_core1.repository;
 
-import com.kiylx.download_module.view.SimpleDownloadInfo;
 import com.kiylx.download_module.interfaces.Repo;
 import com.kiylx.download_module.model.DownloadInfo;
 import com.kiylx.download_module.model.HeaderStore;
 import com.kiylx.download_module.model.PieceInfo;
+import com.kiylx.download_module.view.SimpleDownloadInfo;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 每一个下载任务都有一个文件存储下载信息
+ * 文件以下载信息中的文件名为名称，以“session”为后缀，存储于某个位置，位置由context指定,操作系统不同，位置不同
+ */
 public class RepoImpl implements Repo {
     private static volatile Repo mRepo;
 
@@ -59,26 +63,30 @@ public class RepoImpl implements Repo {
      */
     @Override
     public void updateHeader(UUID uuid, String headerName, String value) {
-
+//todo
     }
 
     @Override
     public HeaderStore[] getHeadersById(UUID uuid, String... exclude) {
+        //todo
         return new HeaderStore[0];
     }
 
     @Override
     public HeaderStore[] getHeadersByName(UUID uuid, String... include) {
+        //todo
         return new HeaderStore[0];
     }
 
     @Override
     public List<SimpleDownloadInfo> queryList(int kind) {
+        //todo
         return null;
     }
 
     @Override
     public void syncInfoToDisk(DownloadInfo info, SyncAction action) {
+        //todo
         //更新存储库信息
         boolean isExist = queryInfo(info) != null;
         if (!isExist && (action == SyncAction.UPDATE || action == SyncAction.ADD)) {
@@ -96,12 +104,13 @@ public class RepoImpl implements Repo {
 
     @Override
     public boolean deletePieceInfo(UUID uuid) {
+        //todo
         return false;
     }
 
     @Override
     public void syncPieceInfoToDisk(PieceInfo info, SyncAction action) {
-
+//todo
     }
 
 }

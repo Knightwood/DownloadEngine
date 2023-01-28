@@ -6,6 +6,7 @@ import com.kiylx.download_module.model.TaskLifecycle
 import com.kiylx.download_module.model.TaskResult
 import java.util.*
 
+@Deprecated("")
 data class SimpleDownloadInfo(
     val uuid: UUID? = null,
     val fileName: String,
@@ -34,6 +35,7 @@ data class SimpleDownloadInfo(
     }
 }
 
+@Deprecated("")
 fun genSimpleDownloadInfo(info: DownloadInfo): SimpleDownloadInfo {
     return SimpleDownloadInfo(
         uuid = info.uuid,

@@ -1,62 +1,56 @@
 package com.kiylx.download_module
 
-import com.kiylx.download_module.file.fileskit.FileKit
-import com.kiylx.download_module.file.fileskit.FileKitImpl
 import com.kiylx.download_module.file.file_platform.system.SysCall
 import com.kiylx.download_module.file.file_platform.system.SysCallImpl
-import com.kiylx.download_module.interfaces.ATaskHandler
-import com.kiylx.download_module.interfaces.VerifyFactory
-import com.kiylx.download_module.model.VerifyFactoryImpl
+import com.kiylx.download_module.file.fileskit.FileKit
+import com.kiylx.download_module.file.fileskit.FileKitImpl
 import com.kiylx.download_module.interfaces.Repo
+import com.kiylx.download_module.interfaces.VerifyFactory
+import com.kiylx.download_module.lib_core1.DownloadTaskHandler
+import com.kiylx.download_module.model.VerifyFactoryImpl
 import com.kiylx.download_module.network.HttpManager
-import com.kiylx.download_module.lib_core.repository.RepoImpl
-import com.kiylx.download_module.taskhandler.DownloadTaskHandler
-import com.kiylx.download_module.utils.CDelegate
-import com.kiylx.download_module.view.ViewSources
+import com.kiylx.download_module.taskhandler.ATaskHandler
+import com.kiylx.download_module.utils.CreateClassInstance
+import com.kiylx.download_module.view.IViewSources
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
+/**
+ * 如果组件依赖此类，此类的初始化要在其余类之前。
+ * 因此，依赖此类的类，在这里要延迟初始化。
+ */
 class Context private constructor(configs: ContextConfigs) {
-    private var setting: Context.ContextConfigs = configs
-    var limit = setting.limit
+    var contextScope: CoroutineScope = CoroutineScope(CoroutineName("context-scope") + Dispatchers.Default)
+    private var setting: ContextConfigs = configs
+    val config = setting//对外暴露
 
-    /**
-     * 下载时使用的线程数默认期待值，但受到实际情况的限制，在不支持多线程下载的情况下，不一定会使用此值
-     */
-    var defaultThreadNum = setting.threadNum//DownloadInfo中线程数不存在或不合法时使用这里的缺省值
-    var userAgent = setting.userAgent
-    var repo: Repo? = null
-        get() {
-            if (field == null)
-                return if (setting.repoClazz == null) {
-                    field = RepoImpl.getInstance()
-                    field
-                } else {
-                    val obj = setting.repoClazz!!.getDeclaredConstructor().newInstance()
-                    field = obj
-                    field
-                }
-            return field
-        }
+    //=======================================类实例=======================================//
+    val sysCallKit: SysCall by CreateClassInstance(setting.sysCallClazz) { SysCallImpl() }
+    val fileKit: FileKit<*> by CreateClassInstance(setting.fileKitClazz) { FileKitImpl() }
+    val repo: Repo by CreateClassInstance(setting.repoClazz) {
+        setting.repoClazz!!.getDeclaredConstructor().newInstance()
+    }
 
-    val SysCallKit: SysCall by CDelegate(setting.sysCallClazz, ::SysCallImpl)
-
-    val fileKit: FileKit<*> by CDelegate(setting.fileKitClazz,
-        ::FileKitImpl
-    )
-//不要提前初始化！！！
-//    val taskHandler: TaskHandler by lazy { TaskHandler.getInstance(limit) }
+    //保持延迟初始化，不要提前初始化！！！
     val taskHandler: ATaskHandler by lazy { DownloadTaskHandler.instance }
     val verifyFactory: VerifyFactory by lazy { VerifyFactoryImpl() }
     val httpManager: HttpManager by lazy { HttpManager.getInstance() }
 
+    //=======================================方法======================================//
     /**
-     * 外界将接口实现通过此方法注册到TaskHandler中。
+     * 外界将接口实现通过此方法注册到TaskHandler中，是所有下载任务共同的处理功能
      * 以此实现在下载完成后，外界自动处理下载文件，比如重命名文件并移动到某一个特定目录
+     * 但如果任务本身有注册处理接口，则这里注册给下载任务管理器的将不起作用
      */
-    fun setDownloadFinishHandle(downloadFinishHandler: ATaskHandler.IBackHandler){
-            taskHandler.registerHandle(downloadFinishHandler)
+    fun setDownloadFinishHandle(downloadFinishHandler: ATaskHandler.IBackHandler) {
+        taskHandler.registerHandle(downloadFinishHandler)
     }
 
-    fun setViewObserver(viewSources: ViewSources) {
+    /**
+     * 将视图监听器注册到下载任务管理，以接收任务信息更新
+     */
+    fun setViewObserver(viewSources: IViewSources) {
         taskHandler.registerViewSources(viewSources)
     }
 
@@ -88,9 +82,13 @@ class Context private constructor(configs: ContextConfigs) {
         var repoClazz: Class<out Repo>? = null
         var fileKitClazz: Class<out FileKit<*>>? = null
         var sysCallClazz: Class<out SysCall>? = null
+
         var limit = defaultDownloadLimit
-        var threadNum = defaultDownloadThreadNum
+        var downloadThreadNum = defaultDownloadThreadNum//下载时使用的线程数默认期待值，但受到实际情况的限制，在不支持多线程下载的情况下，不一定会使用此值
         var userAgent = defaultUserAgent
+        var minSizeUseMultiThread: Int = 10485760 //达到10Mb时可以使用多线程下载
+        var maxDownloadThreadNum: Int = 64 //一个下载任务的最大下载线程（分块）数量
+        var autoRunStopTask = false//true：某个下载任务完成后，是否自动运行处于暂停状态的任务
     }
 
 }

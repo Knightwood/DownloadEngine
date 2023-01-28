@@ -1,6 +1,6 @@
 plugins {
     id ("java")
-    id ("org.jetbrains.kotlin.jvm") version "1.5.31"
+    kotlin("jvm") version "1.6.21"
     id ("maven-publish")
 }
 
@@ -11,17 +11,18 @@ repositories {
 
 dependencies {
 
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.6.0")
-    testImplementation ("org.junit.jupiter:junit-jupiter-api:5.6.0")
-    testRuntimeOnly ("org.junit.jupiter:junit-jupiter-engine:5.8.2")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.6.21")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
     // Other dependencies.
     testImplementation(kotlin("test"))
 
-    implementation ("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
     //implementation 'com.google.code.gson:gson:2.8.6'
     //implementation ("io.reactivex.rxjava2:rxjava:2.2.19")
     //字符编码识别
-    implementation ("com.github.albfernandez:juniversalchardet:2.4.0")
+    implementation("com.github.albfernandez:juniversalchardet:2.4.0")
 
     //okhttp LoggingInterceptor
     implementation("com.github.ihsanbal:LoggingInterceptor:3.1.0") {

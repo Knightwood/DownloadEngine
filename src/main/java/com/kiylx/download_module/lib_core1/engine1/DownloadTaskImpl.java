@@ -1,4 +1,4 @@
-package com.kiylx.download_module.lib_core.engine1;
+package com.kiylx.download_module.lib_core1.engine1;
 
 import com.kiylx.download_module.file.file_platform.FakeFile;
 import com.kiylx.download_module.file.fileskit.FileKit;
@@ -9,7 +9,9 @@ import com.kiylx.download_module.model.*;
 import com.kiylx.download_module.network.HttpUtils;
 import com.kiylx.download_module.network.TaskDataReceive;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
+import com.kiylx.download_module.view.ViewUpdateAction;
 import kotlin.Pair;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -53,6 +55,7 @@ public class DownloadTaskImpl extends DownloadTask {
             return Objects.requireNonNull(checkDiskAndInitFile()).getFirst();
         }
 
+        @NotNull
         @Override
         public DownloadInfo getDownloadInfo() {
             return info;
@@ -62,10 +65,6 @@ public class DownloadTaskImpl extends DownloadTask {
 
     public DownloadTaskImpl(DownloadInfo info) {
         super(info);
-    }
-
-    public static DownloadTask instance(DownloadInfo info) {
-        return new DownloadTaskImpl(info);
     }
 
     private long lastSize = 0L;//上次计算速度时的文件大小
@@ -214,11 +213,11 @@ public class DownloadTaskImpl extends DownloadTask {
         syncInfo(Repo.SyncAction.UPDATE);
         long speed = deltaSize / updateViewInterval * 1000; // bytes/s
         //lastTime = System.currentTimeMillis();
-        logger.info("速度（bytes/s）：  "+speed+"\n");
+        logger.info("速度（bytes/s）：  " + speed + "\n");
         lastSize = currentSize;
         info.setSpeed(speed);
         if (viewSources != null)
-            viewSources.notifyViewsChanged(info, Repo.SyncAction.UPDATE, getLifecycleCollection());
+            viewSources.notifyViewsChanged(info, ViewUpdateAction.UPDATE_PROGESS, getLifecycleCollection());
     }
 
 

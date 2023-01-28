@@ -1,40 +1,40 @@
 package com.kiylx.download_module.interfaces
 
-import com.kiylx.download_module.getContext
-import java.util.concurrent.Callable
-import com.kiylx.download_module.model.TaskResult
-import com.kiylx.download_module.model.DownloadInfo
-import com.kiylx.download_module.view.ViewSources
-import com.kiylx.download_module.file.fileskit.FileKit
 import com.kiylx.download_module.file.file_platform.FakeFile
-import com.kiylx.download_module.interfaces.DownloadTask.LifecycleCollection
-import com.kiylx.download_module.model.TaskLifecycle
-import java.util.UUID
-import com.kiylx.download_module.interfaces.DownloadTask
-import com.kiylx.download_module.interfaces.Repo
+import com.kiylx.download_module.file.fileskit.FileKit
+import com.kiylx.download_module.getContext
 import com.kiylx.download_module.interfaces.Repo.SyncAction
-import kotlin.Throws
-import java.lang.NullPointerException
-import com.kiylx.download_module.model.PieceInfo
-import com.kiylx.download_module.model.BasicConclusion
+import com.kiylx.download_module.model.*
+import com.kiylx.download_module.taskhandler.ATaskHandler
+import com.kiylx.download_module.view.IViewSources
+import java.util.*
+import java.util.concurrent.Callable
 import java.util.concurrent.Future
-import com.kiylx.download_module.model.PieceResult
-import java.lang.ThreadLocal
 
 abstract class DownloadTask(@JvmField val info: DownloadInfo) : Callable<TaskResult?> {
     var moveState = 0
+
     @JvmField
-    var viewSources: ViewSources? = null
+    var viewSources: IViewSources? = null
+
     @JvmField
-    protected var fs: FileKit<*>? = null
+    internal var fs: FileKit<*>
+
     @JvmField
-    protected var fakeFile: FakeFile<*>? = null
-    var lifecycleCollection: LifecycleCollection? = null
+    internal var fakeFile: FakeFile<*>? = null
+    var lifecycleCollection: LifecycleCollection
         private set
     var isRecoveryFromDisk = false
 
     val taskId: UUID
         get() = info.uuid!!
+    var backHandler: ATaskHandler.IBackHandler? = null //任务执行完成后的处理，可以没有
+
+    init {
+        lifecycleCollection = LifecycleCollection()
+        lifecycleCollection.initState(TaskLifecycle.OH, TaskLifecycle.OH)
+        fs = getContext().fileKit
+    }
 
     protected abstract fun initTask(): DownloadTask?
 
@@ -57,27 +57,27 @@ abstract class DownloadTask(@JvmField val info: DownloadInfo) : Callable<TaskRes
      */
     abstract fun requestResume()
     val isRunning: Boolean
-        get() = lifecycleCollection!!.nowState == TaskLifecycle.RUNNING
+        get() = lifecycleCollection.nowState == TaskLifecycle.RUNNING
 
     abstract fun getInfo(): DownloadInfo
     fun setLifecycleState(state: TaskLifecycle) {
-        lifecycleCollection!!.setLifecycleState(state)
+        lifecycleCollection.setLifecycleState(state)
         getInfo().lifeCycle = state
         syncInfo(SyncAction.UPDATE_STATE)
     }
 
     val isStop: Boolean
-        get() = lifecycleCollection!!.nowState == TaskLifecycle.STOP
+        get() = lifecycleCollection.nowState == TaskLifecycle.STOP
 
     fun stateStopped() {
-        lifecycleCollection!!.setLifecycleState(TaskLifecycle.STOP)
+        lifecycleCollection.setLifecycleState(TaskLifecycle.STOP)
     }
 
     val isCancel: Boolean
-        get() = lifecycleCollection!!.nowState == TaskLifecycle.CANCEL
+        get() = lifecycleCollection.nowState == TaskLifecycle.CANCEL
 
     fun stateCancel() {
-        lifecycleCollection!!.setLifecycleState(TaskLifecycle.CANCEL)
+        lifecycleCollection.setLifecycleState(TaskLifecycle.CANCEL)
     }
 
     abstract fun syncInfo(action: SyncAction?)
@@ -101,14 +101,14 @@ abstract class DownloadTask(@JvmField val info: DownloadInfo) : Callable<TaskRes
          *
          * @return FakeFile
          */
-        val file: FakeFile<*>?
+        fun getFile(): FakeFile<*>?
 
         /**
          * 给分块线程提供任务的信息
          *
          * @return DownloadTaskInfo
          */
-        val downloadInfo: DownloadInfo?
+        fun getDownloadInfo(): DownloadInfo
     }
 
     /**
@@ -156,9 +156,5 @@ abstract class DownloadTask(@JvmField val info: DownloadInfo) : Callable<TaskRes
         }
     }
 
-    init {
-        lifecycleCollection = LifecycleCollection()
-        lifecycleCollection!!.initState(TaskLifecycle.OH, TaskLifecycle.OH)
-        fs = getContext().fileKit
-    }
+
 }

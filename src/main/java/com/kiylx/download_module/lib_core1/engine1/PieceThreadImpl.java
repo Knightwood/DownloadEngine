@@ -1,4 +1,4 @@
-package com.kiylx.download_module.lib_core.engine1;
+package com.kiylx.download_module.lib_core1.engine1;
 
 import com.kiylx.download_module.file.file_platform.FakeFile;
 import com.kiylx.download_module.interfaces.ConnectionListener;
@@ -27,11 +27,11 @@ import static com.kiylx.download_module.network.TaskDataReceive.parseUnavailable
 import static java.net.HttpURLConnection.*;
 
 public class PieceThreadImpl extends PieceThread {
-    protected static final Logger logger= JavaLogUtil.setLoggerHandler();
+    protected static final Logger logger = JavaLogUtil.setLoggerHandler();
 
     private DownloadTask.TaskCallback callback;
     private FakeFile rf;
-    private InputStream inputStream =null;
+    private InputStream inputStream = null;
     private final ConnectionListener connectionListener = new ConnectionListener() {
         @Override
         public void onResponseHandle(Response response, int code, String message) {
@@ -118,7 +118,7 @@ public class PieceThreadImpl extends PieceThread {
          * connection, or chunked encoding.
          * 为了检测我们何时真正完成，我们需要一个长度、闭合连接或分块编码。
          */
-        boolean hasLength = getTotalBytes() >0;//有长度
+        boolean hasLength = getTotalBytes() > 0;//有长度
         boolean isConnectionClose = "close".equalsIgnoreCase(response.header("Connection"));//关闭
         boolean isEncodingChunked = "chunked".equalsIgnoreCase(response.header("Transfer-Encoding"));//chunked分片
 
@@ -214,6 +214,7 @@ public class PieceThreadImpl extends PieceThread {
         if (callback != null)
             callback.update(getPieceInfo(), isRunning);
     }
+
     /**
      * 线程之行结束的清理
      */
@@ -226,7 +227,7 @@ public class PieceThreadImpl extends PieceThread {
                 rf.close();
                 rf = null;
             }
-            if (inputStream!=null){
+            if (inputStream != null) {
                 inputStream.close();
             }
             callback = null;
@@ -266,13 +267,13 @@ public class PieceThreadImpl extends PieceThread {
         //新任务
         if (downloadInfo.getThreadCounts() == 1 || !downloadInfo.isPartialSupport()) {//单线程下载
             result = new ArrayList<>(1);
-            PieceInfo pieceInfo =new PieceInfo(downloadInfo.getUuid(), 0, 0, downloadInfo.getTotalBytes());
+            PieceInfo pieceInfo = new PieceInfo(downloadInfo.getUuid(), 0, 0, downloadInfo.getTotalBytes());
             PieceThreadImpl thread = new PieceThreadImpl(callback, pieceInfo);
             result.add(thread);
             pieceInfos.add(thread.getPieceInfo());
         } else {
             for (int i = 0; i < downloadInfo.getThreadCounts(); i++) {
-                PieceInfo pieceInfo =new PieceInfo(downloadInfo.getUuid(), i, downloadInfo.getSplitStart()[i], downloadInfo.getSplitEnd()[i]);
+                PieceInfo pieceInfo = new PieceInfo(downloadInfo.getUuid(), i, downloadInfo.getSplitStart()[i], downloadInfo.getSplitEnd()[i]);
                 PieceThreadImpl thread = new PieceThreadImpl(callback, pieceInfo);
                 result.add(thread);
                 pieceInfos.add(thread.getPieceInfo());

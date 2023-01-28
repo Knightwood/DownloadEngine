@@ -1,8 +1,9 @@
 package com.kiylx.download_module.interfaces
 
+import com.kiylx.download_module.taskhandler.ATaskHandler
 import com.kiylx.download_module.taskhandler.ListKind
-import com.kiylx.download_module.view.ViewSources
-import java.util.UUID
+import com.kiylx.download_module.view.IViewSources
+import java.util.*
 
 /**
  * 由下载任务管理器实现，提供给外界使用的关于下载任务的方法
@@ -11,8 +12,8 @@ interface ITaskHandler {
     /**
      * 注册一个视图侦听器，下载产生的信息更新将通过此向外传递
      */
-    fun registerViewSources(viewSources: ViewSources)
-    fun unRegisterViewSources(viewSources: ViewSources)
+    fun registerViewSources(viewSources: IViewSources)
+    fun unRegisterViewSources(viewSources: IViewSources)
 
     /**
      * 注册一个下载任务结束后的处理器

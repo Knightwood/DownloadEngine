@@ -1,4 +1,4 @@
-package com.kiylx.download_module.lib_core.interfaces;
+package com.kiylx.download_module.lib_core1.interfaces;
 
 import com.kiylx.download_module.interfaces.DownloadTask;
 import com.kiylx.download_module.model.TaskResult;

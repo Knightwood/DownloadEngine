@@ -5,7 +5,6 @@ import com.kiylx.download_module.interfaces.DownloadTask
 import com.kiylx.download_module.taskhandler.ListKind.*
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil
 import java.util.*
-import kotlin.NoSuchElementException
 
 /**
  * 存储下载任务（downloadTask），被DownloadTaskHandler所使用，并提供改变他们位置和状态的方法
@@ -14,7 +13,7 @@ class TaskList {
     private val logger = JavaLogUtil.setLoggerHandler()
 
     //同时下载任务限制
-    var downloadLimit = getContext().limit
+    var downloadLimit = getContext().config.limit
 
     /**
      * 包含正在下载和等待下载的任务
@@ -45,6 +44,7 @@ class TaskList {
         val num = active.size - downloadLimit
         return if (num <= 0) 0 else num
     }
+
     /**
      * 返回（没有从队列中移除）第一个正在等待下载的任务的包装
      * 若没有等待下载的任务，返回null
@@ -135,16 +135,9 @@ class TaskList {
     /**
      * 添加到特定TaskList
      */
-    fun find(taskId: UUID, kind: ListKind = ActiveKind): DownloadTask? = when (kind) {
-        None, Stopped -> {
-            paused[taskId]?.task
-        }
-        ActiveKind, WaitKind -> {
-            active[taskId]?.task
-        }
-        SucceedKind, ErrorKind -> {
-            finished[taskId]?.task
-        }
+    fun find(taskId: UUID, kind: ListKind = ActiveKind): DownloadTask? {
+        val taskListMap = getTaskListByKind(kind)
+        return taskListMap[taskId]?.task
     }
 
     fun move(taskId: UUID, oldKind: ListKind = ActiveKind, newKind: ListKind) {
@@ -167,6 +160,15 @@ class TaskList {
             logger.severe("队列中没有任何元素")
         }
 
+    }
+
+    /**
+     * 根据listKind返回不同的任务队列
+     */
+    fun getTaskListByKind(listKind: ListKind) = when (listKind) {
+        None, Stopped -> paused
+        ActiveKind, WaitKind -> active
+        SucceedKind, ErrorKind -> finished
     }
 }
 

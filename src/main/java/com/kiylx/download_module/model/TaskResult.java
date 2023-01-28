@@ -61,11 +61,4 @@ public class TaskResult {
         ERROR //出错
     }
 
-    //task目前在哪个阶段
-    /*public static class Kind {
-        public static final int init_ = 0; //初始状态
-        public static final int wait = 1; //等待状态
-        public static final int active = 2; //下载状态
-        public static final int finish = 3; //完成状态
-    }*/
 }

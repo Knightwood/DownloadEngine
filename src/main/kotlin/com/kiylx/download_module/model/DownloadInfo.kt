@@ -1,10 +1,10 @@
 package com.kiylx.download_module.model
 
-import com.kiylx.download_module.view.genSimpleDownloadInfo
+import com.kiylx.download_module.getContext
 import java.util.*
 
-class DownloadInfo(var url: String, var fileFolder: String, var fileName: String = "") {
-    var path: String = ""
+data class DownloadInfo(var url: String, var fileFolder: String, var fileName: String = "") {
+    var path: String = ""//文件路径
     var uuid: UUID? = null
         //标识唯一信息
         get() {
@@ -15,7 +15,10 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
         }
     var mimeType: String? = null
     var extension: String = "unknow"//文件的扩展名
-    var totalBytes: Long = -1L//需要下载文件的总大小，其从response中获取，或者从调用它的方法中给予
+
+    //需要下载文件的总大小，其从response中获取，或者从调用它的方法中给予
+    //如果提前知道确切大小，可以在生成下载信息时提前写入，那么在获取长度信息时将以此处为准
+    var totalBytes: Long = -1L
     var isHasMetadata = false
     var fetchCount = 0//初始化后，计数是0,获取一次metadata计数加一  //MetaData
     var retryAfter = 0//多久后重新尝试下载
@@ -28,52 +31,33 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
         }
     var userAgent: String? = null
     var referer: String = ""
-    var lifeCycle: TaskLifecycle = TaskLifecycle.OH
-        //这是task的生命周期状态
-        set(value) {
-            field = value
-            simpleDownloadInfo.state = value
-        }
-    var isRunning = false //下载任务是否正在进行
-        set(value) {
-            field = value
-            simpleDownloadInfo.isRunning = value
-        }
+    var lifeCycle: TaskLifecycle = TaskLifecycle.OH//这是task的生命周期状态
+
     var taskResult: TaskResult.TaskResultCode = TaskResult.TaskResultCode.OH//任务结果，成功或失败，暂停等
 
+    //下载的详细结果
+    //FinalCode 下载任务成功与否，是不是在等在网络重新下载，结果同步至此
     var finalCode = StatusCode.STATUS_INIT
-        //下载的详细结果
-        //FinalCode 下载任务成功与否，是不是在等在网络重新下载，结果同步至此
-        set(value) {
-            field = value
-            simpleDownloadInfo.finalCode = value
-        }
+
+    //FinalMsg  处理code表示的结果之外 额外的消息
     var finalMsg: String? = null
-        //FinalMsg  处理code表示的结果之外 额外的消息
-        set(value) {
-            field = value
-            simpleDownloadInfo.finalMsg = value
-        }
 
     var isPartialSupport = false//是否支持分块下载
-    var threadCounts: Int = 1
-        //下载这个文件而分配的线程数量。若当前任务正在下载，那设置中更改线程数量不会被应用到这个正在下载或正在暂停状态的任务
-        set(value) {
-            if (value <= 0)
-                throw IllegalArgumentException("Piece number can't be less or equal zero")
-            if (!isPartialSupport && value > 1)
-                throw IllegalStateException("The download doesn't support partial download")
-
-            if ((totalBytes <= 0 && value != 1) || (totalBytes in 1 until threadCounts))
-                throw IllegalStateException("The number of pieces can't be more than the number of total bytes")
-            field = value
-        }
+    var threadCounts: Int = 0//下载这个文件而分配的线程数量。若当前任务正在下载，那设置中更改线程数量不会被应用到这个正在下载或正在暂停状态的任务
 
     var splitStart: Array<Long?> = emptyArray()
     var splitEnd: Array<Long?> = emptyArray()
 
+    var checkSum: String? = null // MD5,SHA-1 SHA-256。 添加下载生成downloadinfo时添加，也可不添加 。若添加此值，在下载完成时，会校验此值
+    var checkSumType = CheckSumType.md5//默认校验方式是md5
+
+    var description: String? = null//下载描述信息
+
     //分块集合
     var piecesList: MutableList<PieceInfo> = mutableListOf()
+
+    //=======================================以下是一些不需要序列化的内容
+    var isRunning = false //下载任务是否正在进行
 
     fun getDownloadedSize(): Long {
         var size: Long = 0L
@@ -83,11 +67,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
         return size
     }
 
-    //更新simpleDownloadInfo中的下载速度
-    // bytes/s
-    fun setSpeed(value: Long) {
-        simpleDownloadInfo.speed = value
-    }
+    var speed: Long = 0L// bytes/s 更新simpleDownloadInfo中的下载速度
 
     //返回已下载百分比
     fun getPercent(): Long {
@@ -99,8 +79,6 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
 
     //var pieceResultArray: Array<PieceResult>? = null//分块的结果，目前还没有使用
 
-    var checkSum: String? = null // MD5, SHA-256。 添加下载生成downloadinfo时添加，也可不添加 。若添加此值，在下载完成时，会校验此值
-    var description: String? = null//下载描述信息
     fun reduceRetryCount() {
         if (retryCount > 0)
             retryCount--
@@ -118,10 +96,6 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
         fetchCount = 0
         isHasMetadata = false
         totalBytes = -1
-    }
-
-    val simpleDownloadInfo by lazy {
-        genSimpleDownloadInfo(info = this)
     }
 
     companion object {
@@ -179,9 +153,25 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
             info.finalMsg = msg
         }
 
-        @JvmStatic
-        fun calcSpeed(info: DownloadInfo) {
 
+    }
+}
+
+/**
+ * 1.检查线程数量本身是否合法
+ *
+ * 2.检查线程数量在"最小可用多线程下载尺寸"下是否合法
+ *
+ * 如果不合法，自动修改为合法的值；
+ */
+fun DownloadInfo.fixThreadNumBySize() {
+    if (!isPartialSupport || totalBytes < getContext().config.minSizeUseMultiThread) {
+        //不支持多线程下载或者文件尺寸太小不适合用多线程下载
+        threadCounts = 1
+    } else {
+        if (threadCounts <= 0 || threadCounts > getContext().config.maxDownloadThreadNum) {
+            //生成下载信息时，未指定线程数量.或者线程数量超出多线程下载阈值
+            threadCounts = getContext().config.downloadThreadNum
         }
     }
 }
@@ -191,7 +181,7 @@ class DownloadInfo(var url: String, var fileFolder: String, var fileName: String
  * 比如分块大小是10,整个任务的大小是20，分两个线程下载
  * 那么，分块1的下载范围是0-9,分块2是10-20
  */
-class PieceInfo @JvmOverloads constructor(
+data class PieceInfo @JvmOverloads constructor(
     val id: UUID, //downloadInfo的uuid
     val blockId: Int = 0,//分块编号
 
@@ -200,11 +190,13 @@ class PieceInfo @JvmOverloads constructor(
 
     ) {
 
-    var totalBytes: Long =  end - start + 1        //此分块的完整大小//初始化分块大小信息
+    var totalBytes: Long = end - start + 1        //此分块的完整大小//初始化分块大小信息
 
     var curBytes: Long = 0//当前分块已经下载了多少
     var finalCode: Int = StatusCode.STATUS_INIT
     var msg: String? = null
+
+    //=======================================以下是一些不需要序列化的内容
     var speed: Long = 0L
 
     fun startPlus(delta: Long) {
@@ -218,5 +210,13 @@ class PieceInfo @JvmOverloads constructor(
     fun clean() {
         finalCode = StatusCode.STATUS_INIT
         msg = null
+    }
+}
+
+class CheckSumType {
+    companion object {
+        const val md5 = 0
+        const val sha1 = 1
+        const val sha256 = 2
     }
 }

@@ -1,10 +1,8 @@
 package com.kiylx.download_module
 
-import com.kiylx.download_module.interfaces.ATaskHandler
 import com.kiylx.download_module.interfaces.DownloadTask
-import com.kiylx.download_module.lib_core.engine1.DownloadTaskImpl
 import com.kiylx.download_module.model.DownloadInfo
-import com.kiylx.download_module.view.SimpleDownloadInfo
+import com.kiylx.download_module.taskhandler.ATaskHandler
 import java.util.*
 
 class Downloads private constructor(configs: Context.ContextConfigs) {
@@ -17,39 +15,57 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
         mTaskHandler = mContext.taskHandler
     }
 
-    fun execDownloadTask(url: String, path: String, fileName: String = ""): DownloadInfo {
-        val info = DownloadInfo(url, path, fileName)
-        execDownloadTask(info)
+    //=======================================下载任务相关方法======================================//
+    @JvmOverloads
+    fun execDownloadTask(
+        url: String,
+        path: String,
+        fileName: String = "",
+        totalSize: Long = -1,
+        threadNum: Int = 0,
+        backProcess: ATaskHandler.IBackHandler? = null
+    ): DownloadInfo {
+        val info = DownloadInfo(url, path, fileName).apply {
+            totalBytes = totalSize
+            threadCounts = threadNum
+        }
+        execDownloadTask(info, false, backProcess)
         return info
     }
 
-    fun execDownloadTask(info: DownloadInfo, fromDisk: Boolean = false) {
-        val task = DownloadTaskImpl.instance(info) //添加下载任务
-        if (fromDisk)
-            task.isRecoveryFromDisk = true;
-        runDownloadTask(task)
+    fun execDownloadTask(
+        info: DownloadInfo,
+        fromDisk: Boolean = false,
+        backProcess: ATaskHandler.IBackHandler? = null
+    ) {
+        //生成下载任务
+        mTaskHandler.generateNewTask(info).run {
+            if (fromDisk)
+                isRecoveryFromDisk = true
+            backHandler = backProcess
+            runDownloadTask(this)
+        }
+
     }
 
     fun pauseDownload(id: UUID) = mTaskHandler.requestPauseTask(id)
     fun resumeTask(id: UUID) = mTaskHandler.resumeTask(id)
     fun cancelTask(id: UUID) = mTaskHandler.requestCancelTask(id)
 
+    //=======================================存储相关方法======================================//
     /**
      * @param kind :DownloadsListKind中定义
-     * 返回存储库存储信息
+     * 返回存储库存储的下载信息
      */
-    @Deprecated("不该使用")
-    fun getDownloadsInfoList(kind: Int): MutableList<SimpleDownloadInfo>? {
-        return mContext.repo?.queryList(kind)
+    fun getDownloadsInfoList(kind: Int): MutableList<DownloadInfo> {
+        TODO("Not yet implemented")
+
+        //return mContext.repo?.queryList(kind)
     }
 
+    //=======================================私有方法======================================//
     private fun runDownloadTask(task: DownloadTask) {
         mTaskHandler.addDownloadTask(task)
-    }
-
-    private fun pauseDownload(task: DownloadTask) {
-        val id = task.info.uuid
-        id?.let { pauseDownload(it) }
     }
 
     companion object {
@@ -77,7 +93,7 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
 
 class DownloadsListKind {
     companion object {
-        const val none=-1
+        const val none = -1
         const val wait_kind = 0 //wait和frozen同属于wait队列
         const val active_kind = 1
         const val frozen_kind = 2
