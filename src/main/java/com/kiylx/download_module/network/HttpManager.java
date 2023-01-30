@@ -62,6 +62,7 @@ public class HttpManager {
     }
 
     /**
+     * 会阻塞
      */
     public void getResponse(Request request,@NotNull ConnectionListener listener) {
         System.out.println("httpManager的getResponse方法");

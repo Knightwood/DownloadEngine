@@ -29,6 +29,11 @@ public class StatusCode {
     public static final int STATUS_WAITING = 110;//等待下载
     public static final int STATUS_WAITING_TO_RETRY = 111;//等待重试
     public static final int STATUS_WAITING_FOR_NETWORK = 112;//正在等待网络连接继续进行
+    /**
+     * 再请求一次。
+     * 例如html的下载，需要referer，但第一次请求时没有带referer，那么就需要带上referer再请求一次
+     */
+    public static final int STATUS_RETRY_REQUEST = 113;
 
     /*
      * This request couldn't be parsed. This is also used when processing

@@ -139,6 +139,10 @@ public class DownloadTaskImpl extends DownloadTask {
         logger.info("调用fetchMetaData之前 以及 是否是旧任务" + shouldQueryDb);
         TaskResponse metaResult;
         metaResult = TaskDataReceive.fetchMetaData(info, shouldQueryDb);
+        if (metaResult != null && metaResult.getFinalCode() == STATUS_RETRY_REQUEST) {
+            //如果请求获得信息出现问题，再重试一次
+            metaResult = TaskDataReceive.fetchMetaData(info, shouldQueryDb);
+        }
         if (metaResult != null)
             return metaResult;
         if (info.getTotalBytes() == 0) {

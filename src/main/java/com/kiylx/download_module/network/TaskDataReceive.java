@@ -4,13 +4,12 @@ import com.kiylx.download_module.file.fileskit.FileKit;
 import com.kiylx.download_module.interfaces.ConnectionListener;
 import com.kiylx.download_module.interfaces.RemoteRepo;
 import com.kiylx.download_module.interfaces.Repo;
-import com.kiylx.download_module.model.DownloadInfo;
-import com.kiylx.download_module.model.DownloadInfoKt;
-import com.kiylx.download_module.model.TaskResponse;
-import com.kiylx.download_module.model.TaskResult;
+import com.kiylx.download_module.model.*;
 import com.kiylx.download_module.utils.DateUtils;
 import com.kiylx.download_module.utils.TextUtils;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -20,6 +19,8 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import static com.kiylx.download_module.ContextKt.getContext;
@@ -43,11 +44,8 @@ public class TaskDataReceive implements RemoteRepo {
         final TaskResponse[] result = new TaskResponse[1];
         Request.Builder builder = new Request.Builder()
                 .url(info.getUrl());//构建request
-        if (!TextUtils.isEmpty(info.getUserAgent())) {
-            builder.addHeader("User-Agent", info.getUserAgent());
-        }
-        if (!info.getReferer().isEmpty())
-            builder.addHeader("Referer", info.getReferer());
+        Map<String, String> headerMap = HeaderStoreKt.filterCustomHeaders(info);
+        headerMap.forEach(builder::addHeader);//添加自定义header
 
         logger.info("调用getResponse方法");
         try {//尝试请求，获得结果并解析
@@ -98,9 +96,7 @@ public class TaskDataReceive implements RemoteRepo {
             Repo repo = getContext().getRepo();
             if (result[0] != null)
                 DownloadInfo.modifyMsg(info, result[0]);//下载结果写入DownloadInfo
-            if (repo != null) {
-                repo.syncInfoToDisk(info, Repo.SyncAction.UPDATE);//更新存储库中downloadInfo信息
-            }
+            repo.syncInfoToDisk(info, Repo.SyncAction.UPDATE);//更新存储库中downloadInfo信息
         }
         return result[0];
     }
@@ -194,8 +190,7 @@ public class TaskDataReceive implements RemoteRepo {
             boolean isExist = kit.isExist(tmpPath, FileKit.FileKind.file);
             if (isExist) {
                 fileName = LocalDateTime.now() + fileName;
-            }
-            //默认产生下载任务时给的文件名是不包含后缀的
+            }//默认产生下载任务时给的文件名是不包含后缀的
         }
 
         info.setFileName(fileName);
@@ -210,12 +205,22 @@ public class TaskDataReceive implements RemoteRepo {
                 info.setTotalBytes(-1L);//长度未知
         }
 
-        boolean partialSupport = "bytes".equalsIgnoreCase(response.header("Accept-Ranges"));
+        boolean partialSupport = "bytes".equalsIgnoreCase(response.header(HeaderName.AcceptRanges));
         info.setPartialSupport(partialSupport);//是否支持断点请求
         DownloadInfoKt.fixThreadNumBySize(info);//修正线程数量支持
-        String eTagValue = response.header("ETag");
-        repo.updateHeader(info.getUuid(), "ETag", eTagValue);
 
+        boolean currentRefererEmpty = TextUtils.isEmpty(response.header(HeaderName.Referer));
+        boolean needsReferer = currentRefererEmpty &&
+                HttpUtils.needsReferer(mimetype.type(), ext) &&
+                info.getCustomHeaders().get(HeaderName.Referer) == null;//如果info中已经有了referer，那前面必然已经带上了referer
+
+        String eTagValue = response.header(HeaderName.ETag);
+        HeaderStoreKt.editCustomHeaders(info, headerMap -> {
+            headerMap.put(HeaderName.ETag, eTagValue);
+            if (needsReferer)
+                headerMap.put(HeaderName.Referer, info.getUrl());
+            return null;
+        });
         if (!queryDb && info.getTotalBytes() != -1) {//新任务，分配每个分块的大小。
             DownloadInfo.allocPieceFileSize(info);
         }
@@ -223,7 +228,9 @@ public class TaskDataReceive implements RemoteRepo {
         info.setFinalCode(STATUS_RUNNING);
         repo.syncInfoToDisk(info, Repo.SyncAction.UPDATE);//更新存储库中downloadInfo信息
         logger.info("解析结束");
-        //DownloadInfo info1 = info;
+        if (needsReferer) {
+            return TaskResponse.error(STATUS_RETRY_REQUEST);
+        }
         return null;
     }
 

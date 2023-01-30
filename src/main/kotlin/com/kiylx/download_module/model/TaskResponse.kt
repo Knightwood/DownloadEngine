@@ -9,5 +9,11 @@ import com.kiylx.download_module.model.TaskResult.TaskResultCode
 data class TaskResponse(
     var finalCode: Int = StatusCode.STATUS_INIT,
     var message: String = "",
-    var taskResultCode: TaskResultCode=TaskResultCode.OH,
-)
+    var taskResultCode: TaskResultCode = TaskResultCode.OH,
+) {
+    companion object {
+        @JvmStatic
+        @JvmOverloads
+        fun error(code: Int, msg: String = "ERROR") = TaskResponse(code, msg, TaskResultCode.ERROR)
+    }
+}

@@ -2,6 +2,9 @@ package com.kiylx.download_module
 
 import com.kiylx.download_module.interfaces.DownloadTask
 import com.kiylx.download_module.model.DownloadInfo
+import com.kiylx.download_module.model.HeaderName
+import com.kiylx.download_module.model.HeaderStore
+import com.kiylx.download_module.model.editCustomHeaders
 import com.kiylx.download_module.taskhandler.ATaskHandler
 import java.util.*
 
@@ -16,6 +19,9 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
     }
 
     //=======================================下载任务相关方法======================================//
+    /**
+     * @param customHeaders 自定义header列表，例如传入自定义的referer，useragent等
+     */
     @JvmOverloads
     fun execDownloadTask(
         url: String,
@@ -23,11 +29,16 @@ class Downloads private constructor(configs: Context.ContextConfigs) {
         fileName: String = "",
         totalSize: Long = -1,
         threadNum: Int = 0,
+        customHeaders:MutableList<HeaderStore>?=null,
         backProcess: ATaskHandler.IBackHandler? = null
     ): DownloadInfo {
         val info = DownloadInfo(url, path, fileName,UUID.randomUUID()).apply {
             totalBytes = totalSize
             threadCounts = threadNum
+            editCustomHeaders {
+                this[HeaderName.UserAgent]=Context.defaultUserAgent
+            }
+            addCustomHeaders(customHeaders)
         }
         execDownloadTask(info, false, backProcess)
         return info

@@ -66,9 +66,16 @@ abstract class PieceThread(var pieceInfo: PieceInfo) : Callable<PieceResult?> {
             pieceInfo.curBytes = curBytes
         }
 
-    //这个分块的大小
+    /**
+     *  这个分块的大小
+     *  若分块没有长度，即start和end都是-1，这里会得出等于1的错误结论
+     */
     val totalBytes: Long
         get() = pieceInfo.end - pieceInfo.start - pieceInfo.curBytes + 1
+
+    fun hasLength():Boolean{
+        return totalBytes>0 && start>-1 && end>-1
+    }
 
     /**
      * 描述piece执行的结果或者当前的状态

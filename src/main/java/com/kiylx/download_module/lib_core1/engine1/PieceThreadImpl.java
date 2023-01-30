@@ -112,22 +112,19 @@ public class PieceThreadImpl extends PieceThread {
     }
 
     //todo 这里真的需要验证吗？？？
+    /*
+     * 为了检测我们何时真正完成，我们需要一个长度、闭合连接或分块编码。
+     */
     private boolean verifyResponse(Response response) {
-        /*
-         * To detect when we're really finished, we either need a length, closed
-         * connection, or chunked encoding.
-         * 为了检测我们何时真正完成，我们需要一个长度、闭合连接或分块编码。
-         */
-        boolean hasLength = getTotalBytes() > 0;//有长度
         boolean isConnectionClose = "close".equalsIgnoreCase(response.header("Connection"));//关闭
         boolean isEncodingChunked = "chunked".equalsIgnoreCase(response.header("Transfer-Encoding"));//chunked分片
 
-        if (!(hasLength || isConnectionClose || isEncodingChunked)) {
+        if (!(hasLength() || isConnectionClose || isEncodingChunked)) {
             //没有长度信息，没有关闭，也不是chunked
             //尝试获取内容长度
             try {
                 long contentLength = Long.parseLong(response.header("Content-Length"));
-                if (contentLength != -1) {//得到长度信息，赋值
+                if (contentLength != -1&& getBlockId() == 0) {//得到长度信息，赋值
                     getPieceInfo().setTotalBytes(contentLength);
                 } else {//没有获得长度信息，报错
                     generatePieceResult(STATUS_CANNOT_RESUME,

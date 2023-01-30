@@ -4,6 +4,7 @@ import com.kiylx.download_module.utils.MimeTypeUtils;
 import com.kiylx.download_module.utils.TextUtils;
 import com.kiylx.download_module.utils.java_log_pack.JavaLogUtil;
 
+import org.jetbrains.annotations.Nullable;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import java.io.ByteArrayOutputStream;
@@ -18,7 +19,7 @@ import java.util.regex.Pattern;
 import static com.kiylx.download_module.ContextKt.getContext;
 
 public class HttpUtils {
-    protected static Logger logger= JavaLogUtil.setLoggerHandler();
+    protected static Logger logger = JavaLogUtil.setLoggerHandler();
     public static final String INFINITY_SYMBOL = "\u221e";
     public static final String HTTP_PREFIX = "http";
     public static final String DEFAULT_DOWNLOAD_FILENAME = "downloadfile";
@@ -76,11 +77,11 @@ public class HttpUtils {
         String mimeType = null;
         if (!TextUtils.isEmpty(extension))
             mimeType = MimeTypeUtils.guessMimeTypeFromExtension(extension);
-        logger.info("filename:"+fileName+"; mimeType:"+mimeType+"; ext:"+extension);
+        logger.info("filename:" + fileName + "; mimeType:" + mimeType + "; ext:" + extension);
         return new String[]{fileName, mimeType, extension};
     }
 
-    public static String getHttpFileName( String decodedUrl,
+    public static String getHttpFileName(String decodedUrl,
                                          String contentDisposition,
                                          String contentLocation,
                                          String mimeType) {
@@ -101,7 +102,7 @@ public class HttpUtils {
         if (filename == null && contentLocation != null) {
             String decodedContentLocation = null;
             try {
-                decodedContentLocation = URLDecoder.decode(contentLocation,"UTF-8");
+                decodedContentLocation = URLDecoder.decode(contentLocation, "UTF-8");
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
@@ -201,7 +202,7 @@ public class HttpUtils {
      * downloaded to the file system. We only support the attachment type
      */
 
-    private static String parseContentDisposition( String contentDisposition) {
+    private static String parseContentDisposition(String contentDisposition) {
         try {
             Matcher m = CONTENT_DISPOSITION_PATTERN.matcher(contentDisposition);
             if (m.find()) {
@@ -278,6 +279,7 @@ public class HttpUtils {
     /**
      * 例如："filename.exe"
      * 将会返回"exe"
+     *
      * @param fileName 带有扩展名称的文件名
      * @return 返回“ 扩展名”
      */
@@ -285,7 +287,7 @@ public class HttpUtils {
         if (fileName == null)
             return null;
 
-        int extensionPos = fileName.lastIndexOf(EXTENSION_SEPARATOR)+1;
+        int extensionPos = fileName.lastIndexOf(EXTENSION_SEPARATOR) + 1;
         int lastSeparator = fileName.lastIndexOf(File.separator);
         int index = (lastSeparator > extensionPos ? -1 : extensionPos);
 
@@ -294,4 +296,12 @@ public class HttpUtils {
         else
             return fileName.substring(index);
     }
+
+    /*
+     * If an HTML document is returned, then need a Referer from the site URL to download a required file
+     */
+    public static boolean needsReferer(@Nullable String mimeType, @Nullable String extension) {
+        return "text/html".equals(mimeType) || "html".equals(extension) || "htm".equals(extension);
+    }
+
 }

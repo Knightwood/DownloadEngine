@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.*
+import kotlin.collections.HashMap
 
 @Serializable
 data class DownloadInfo(
@@ -32,8 +33,7 @@ data class DownloadInfo(
             if (field < 0)
                 field = 0
         }
-    var userAgent: String? = null
-    var referer: String = ""
+
     var lifeCycle: TaskLifecycle = TaskLifecycle.OH//这是task的生命周期状态
 
     var taskResult: TaskResult.TaskResultCode = TaskResult.TaskResultCode.OH//任务结果，成功或失败，暂停等
@@ -59,7 +59,23 @@ data class DownloadInfo(
     //分块集合
     var piecesList: MutableList<PieceInfo> = mutableListOf()
 
+    //此处存储headers，例如 useragent，referer，eTag，以及其他header等
+    var customHeaders: HashMap<String, String> = hashMapOf()
+
     //=======================================以下是一些不需要序列化的内容
+
+    fun getUserAgent(): String? = customHeaders[HeaderName.UserAgent]
+
+    fun getReferer(): String? = customHeaders[HeaderName.Referer]
+
+    fun addCustomHeaders(headers: MutableList<HeaderStore>? = null) {
+        headers?.let {
+            it.forEach { ch ->
+                this.customHeaders[ch.name] = ch.value
+            }
+        }
+    }
+
     var isRunning = false //下载任务是否正在进行
 
     fun getDownloadedSize(): Long {
@@ -226,7 +242,7 @@ class CheckSumType {
     }
 }
 
-fun main(){
-    val info=DownloadInfo("fff","ggg","namesss",UUID.randomUUID())
+fun main() {
+    val info = DownloadInfo("fff", "ggg", "namesss", UUID.randomUUID())
     print(Json.encodeToString(info))
 }
