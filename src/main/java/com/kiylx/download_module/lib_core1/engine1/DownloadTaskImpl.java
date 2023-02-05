@@ -47,7 +47,6 @@ public class DownloadTaskImpl extends DownloadTask {
         public void update(PieceInfo pieceInfo, boolean isRunning) throws NullPointerException {
             info.setRunning(isRunning);
             //更新进度以及将下载信息保存到磁盘
-            //calcSpeedAndSave();
         }
 
         @Override

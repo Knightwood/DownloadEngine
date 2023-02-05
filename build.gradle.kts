@@ -6,6 +6,9 @@ plugins {
 }
 
 repositories {
+    maven(url="https://maven.aliyun.com/repository/public")
+    maven(url="https://maven.aliyun.com/repository/gradle-plugin")
+    maven(url="https://maven.aliyun.com/repository/jcenter")
     mavenCentral()
     maven(url="https://jitpack.io")
 }
@@ -14,7 +17,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.6.21")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3") //1.4.1对应1.7.20版本的kotlin
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")

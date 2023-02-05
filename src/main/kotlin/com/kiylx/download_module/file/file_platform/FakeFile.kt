@@ -28,7 +28,6 @@ class Platform {
 
 /**
  * 对于不同平台，包含不同的文件使用方式。
- * linux平台下，使用文件描述符；windows平台下使用file对象
  */
 sealed class FakeFile<T>(
     open val file: T,
@@ -124,4 +123,6 @@ class PathFile(val path: Path, platform: Int = linux) : FakeFile<Path>(path, pla
     override fun newInputStream(): InputStream = Files.newInputStream(path)
 
 }
+inline fun Path.newInputStream()=Files.newInputStream(this)
+inline fun Path.newOutputStream()=Files.newOutputStream(this)
 

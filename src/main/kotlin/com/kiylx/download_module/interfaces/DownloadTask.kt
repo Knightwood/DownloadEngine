@@ -63,7 +63,7 @@ abstract class DownloadTask(@JvmField val info: DownloadInfo) : Callable<TaskRes
     fun setLifecycleState(state: TaskLifecycle) {
         lifecycleCollection.setLifecycleState(state)
         getInfo().lifeCycle = state
-        syncInfo(SyncAction.UPDATE_STATE)
+        syncInfo(SyncAction.UPDATE)
     }
 
     val isStop: Boolean

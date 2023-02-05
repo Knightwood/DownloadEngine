@@ -244,9 +244,7 @@ public class PieceThreadImpl extends PieceThread {
                 for (PieceInfo pieceInfo : pieceInfoList) {
                     result.add(new PieceThreadImpl(callback, pieceInfo));
                 }
-                repo.deletePieceInfo(info.getUuid());//已经生成了新的pieceThread,删除存储库中的旧数据
             } else {
-                repo.deletePieceInfo(info.getUuid());
                 getContext().getFileKit().rmdir(info.getPath());
                 return generateNewPieceList(info, callback);
             }
@@ -260,7 +258,7 @@ public class PieceThreadImpl extends PieceThread {
     public static List<PieceThreadImpl> generateNewPieceList(DownloadInfo downloadInfo,
                                                              DownloadTask.TaskCallback callback) {
         List<PieceThreadImpl> result = new ArrayList<>();
-        List<PieceInfo> pieceInfos = new ArrayList<>();
+        List<PieceInfo> pieceInfos = new ArrayList<>();//分块信息
         //新任务
         if (downloadInfo.getThreadCounts() == 1 || !downloadInfo.isPartialSupport()) {//单线程下载
             result = new ArrayList<>(1);
